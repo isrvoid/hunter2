@@ -73,3 +73,91 @@ auto limitRepetitions(size_t maxRep = 1, Range)(Range r)
     assert("middlee endd" == "middleeeeeeeeeeeeeeeee endddddddddddddddddddddd".limitRepetitions!2);
     assert("middllleee" == "middlllllllllllllllllllllllllllllleee".limitRepetitions!3);
 }
+
+struct Node
+{
+    Node[dchar] node;
+    size_t count;
+    alias node this;
+}
+
+void index(ref Node node, string s) pure @system
+{
+    if (s.empty)
+        return;
+
+    auto next = &node.require(s[0]);
+    ++next.count;
+    index(*next, s[1 .. $]);
+}
+
+@("index empty input") unittest
+{
+    Node root;
+    root.index("");
+    assert(root.empty);
+}
+
+@("index single char") unittest
+{
+    Node root;
+    root.index("a");
+    assert(1 == root['a'].count);
+    assert(root['a'].empty);
+}
+
+@("index string") unittest
+{
+    Node root;
+    root.index("ab");
+    assert(1 == root['a'].count);
+    assert(1 == root['a']['b'].count);
+    assert(root['a']['b'].empty);
+}
+
+@("index different strings") unittest
+{
+    Node root;
+    root.index("ab");
+    root.index("cd");
+    assert(1 == root['a'].count);
+    assert(1 == root['a']['b'].count);
+    assert(root['a']['b'].empty);
+    assert(1 == root['c'].count);
+    assert(1 == root['c']['d'].count);
+    assert(root['c']['d'].empty);
+}
+
+@("index overlapping strings") unittest
+{
+    Node root;
+    root.index("ab");
+    root.index("ab");
+    assert(2 == root['a'].count);
+    assert(2 == root['a']['b'].count);
+    assert(root['a']['b'].empty);
+
+    root.index("abc");
+    assert(3 == root['a'].count);
+    assert(3 == root['a']['b'].count);
+    assert(1 == root['a']['b']['c'].count);
+    assert(root['a']['b']['c'].empty);
+}
+
+@("branches do not merge") unittest
+{
+    Node root;
+    root.index("ac");
+    root.index("bc");
+    assert(1 == root['a']['c'].count);
+    assert(1 == root['b']['c'].count);
+}
+
+@("branches do not merge after separation") unittest
+{
+    Node root;
+    root.index("abd");
+    root.index("acd");
+    assert(1 == root['a']['b']['d'].count);
+    assert(1 == root['a']['c']['d'].count);
+}

@@ -10,8 +10,10 @@ endif
 BUILDDIR := bin
 SRC := src
 
-hunter2: $(SRC)/app.d
-	@dmd $(DFLAGS) $^ -of$(BUILDDIR)/$@
+hunter2: $(BUILDDIR)/hunter2
+
+$(BUILDDIR)/hunter2: $(SRC)/app.d
+	@dmd $(DFLAGS) $^ -of$@
 
 clean:
 	-@$(RM) $(wildcard $(BUILDDIR)/*)
