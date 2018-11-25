@@ -82,27 +82,27 @@ struct Node
     alias node this;
 }
 
-void index(ref Node node, string s) pure @system
+void index(string s, ref Node node) pure
 {
     if (s.empty)
         return;
 
     auto next = &node.require(s[0]);
     ++next.count;
-    index(*next, s[1 .. $]);
+    index(s[1 .. $], *next);
 }
 
 @("index empty input") unittest
 {
     Node root;
-    root.index("");
+    "".index(root);
     assert(root.empty);
 }
 
 @("index single char") unittest
 {
     Node root;
-    root.index("a");
+    "a".index(root);
     assert(1 == root['a'].count);
     assert(root['a'].empty);
 }
@@ -110,7 +110,7 @@ void index(ref Node node, string s) pure @system
 @("index string") unittest
 {
     Node root;
-    root.index("ab");
+    "ab".index(root);
     assert(1 == root['a'].count);
     assert(1 == root['a']['b'].count);
     assert(root['a']['b'].empty);
@@ -119,8 +119,8 @@ void index(ref Node node, string s) pure @system
 @("index different strings") unittest
 {
     Node root;
-    root.index("ab");
-    root.index("cd");
+    "ab".index(root);
+    "cd".index(root);
     assert(1 == root['a'].count);
     assert(1 == root['a']['b'].count);
     assert(root['a']['b'].empty);
@@ -132,13 +132,13 @@ void index(ref Node node, string s) pure @system
 @("index overlapping strings") unittest
 {
     Node root;
-    root.index("ab");
-    root.index("ab");
+    "ab".index(root);
+    "ab".index(root);
     assert(2 == root['a'].count);
     assert(2 == root['a']['b'].count);
     assert(root['a']['b'].empty);
 
-    root.index("abc");
+    "abc".index(root);
     assert(3 == root['a'].count);
     assert(3 == root['a']['b'].count);
     assert(1 == root['a']['b']['c'].count);
@@ -148,8 +148,8 @@ void index(ref Node node, string s) pure @system
 @("branches do not merge") unittest
 {
     Node root;
-    root.index("ac");
-    root.index("bc");
+    "ac".index(root);
+    "bc".index(root);
     assert(1 == root['a']['c'].count);
     assert(1 == root['b']['c'].count);
 }
@@ -157,8 +157,8 @@ void index(ref Node node, string s) pure @system
 @("branches do not merge after separation") unittest
 {
     Node root;
-    root.index("abd");
-    root.index("acd");
+    "abd".index(root);
+    "acd".index(root);
     assert(1 == root['a']['b']['d'].count);
     assert(1 == root['a']['c']['d'].count);
 }
