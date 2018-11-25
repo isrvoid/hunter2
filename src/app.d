@@ -82,14 +82,15 @@ struct Node
     alias node this;
 }
 
-void index(string s, ref Node node) pure
+void index(R)(auto ref R r, ref Node node) pure
 {
-    if (s.empty)
+    if (r.empty)
         return;
 
-    auto next = &node.require(s[0]);
-    ++next.count;
-    index(s[1 .. $], *next);
+    auto iNode = &node.require(r.front);
+    r.popFront();
+    ++iNode.count;
+    index(r, *iNode);
 }
 
 @("index empty input") unittest
