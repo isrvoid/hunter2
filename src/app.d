@@ -163,3 +163,39 @@ void index(R)(auto ref R r, ref Node node) pure
     assert(1 == root['a']['b']['d'].count);
     assert(1 == root['a']['c']['d'].count);
 }
+
+void indexSlide(R)(R r, ref Node root) pure
+{
+    while (!r.empty)
+    {
+        r.save.index(root);
+        r.popFront();
+    }
+}
+
+@("indexSlide empty input") unittest
+{
+    Node root;
+    "".indexSlide(root);
+    assert(root.empty);
+}
+
+@("indexSlide single char") unittest
+{
+    Node root;
+    "a".indexSlide(root);
+    assert(1 == root['a'].count);
+    assert(root['a'].empty);
+}
+
+@("indexSlide string") unittest
+{
+    Node expect, root;
+    "aabc".index(expect);
+    "abc".index(expect);
+    "bc".index(expect);
+    "c".index(expect);
+
+    "aabc".indexSlide(root);
+    assert(expect == root);
+}
