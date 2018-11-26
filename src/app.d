@@ -199,3 +199,22 @@ void indexSlide(R)(R r, ref Node root) pure
     "aabc".indexSlide(root);
     assert(expect == root);
 }
+
+void indexListFile(string name, ref Node root)
+{
+    import std.stdio : File;
+    import std.encoding : sanitize;
+    import std.string : strip;
+    import std.uni : asLowerCase;
+
+    foreach (line; File(name).byLineCopy!dchar)
+    {
+        line.sanitize
+            .strip
+            .asLowerCase
+            .limitRepetitions!3
+            .take(32)
+            .array
+            .indexSlide(root);
+    }
+}
