@@ -218,3 +218,10 @@ void indexListFile(string name, ref ShovelNode root)
             .indexSlide(root);
     }
 }
+
+struct Node
+{
+    dchar id;
+    float f;
+    Node[] child;
+}
