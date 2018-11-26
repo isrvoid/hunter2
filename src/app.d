@@ -75,14 +75,14 @@ if (isInputRange!Range)
     assert(equal("middllleee", "middlllllllllllllllllllllllllllllleee".limitRepetitions!3));
 }
 
-struct Node
+struct ShovelNode
 {
-    Node[dchar] node;
+    ShovelNode[dchar] node;
     size_t count;
     alias node this;
 }
 
-void index(R)(auto ref R r, ref Node node) pure
+void index(R)(auto ref R r, ref ShovelNode node) pure
 {
     if (r.empty)
         return;
@@ -95,14 +95,14 @@ void index(R)(auto ref R r, ref Node node) pure
 
 @("index empty input") unittest
 {
-    Node root;
+    ShovelNode root;
     "".index(root);
     assert(root.empty);
 }
 
 @("index single char") unittest
 {
-    Node root;
+    ShovelNode root;
     "a".index(root);
     assert(1 == root['a'].count);
     assert(root['a'].empty);
@@ -110,7 +110,7 @@ void index(R)(auto ref R r, ref Node node) pure
 
 @("index string") unittest
 {
-    Node root;
+    ShovelNode root;
     "ab".index(root);
     assert(1 == root['a'].count);
     assert(1 == root['a']['b'].count);
@@ -119,7 +119,7 @@ void index(R)(auto ref R r, ref Node node) pure
 
 @("index different strings") unittest
 {
-    Node root;
+    ShovelNode root;
     "ab".index(root);
     "cd".index(root);
     assert(1 == root['a'].count);
@@ -132,7 +132,7 @@ void index(R)(auto ref R r, ref Node node) pure
 
 @("index overlapping strings") unittest
 {
-    Node root;
+    ShovelNode root;
     "ab".index(root);
     "ab".index(root);
     assert(2 == root['a'].count);
@@ -148,7 +148,7 @@ void index(R)(auto ref R r, ref Node node) pure
 
 @("branches do not merge") unittest
 {
-    Node root;
+    ShovelNode root;
     "ac".index(root);
     "bc".index(root);
     assert(1 == root['a']['c'].count);
@@ -157,14 +157,14 @@ void index(R)(auto ref R r, ref Node node) pure
 
 @("branches do not merge after separation") unittest
 {
-    Node root;
+    ShovelNode root;
     "abd".index(root);
     "acd".index(root);
     assert(1 == root['a']['b']['d'].count);
     assert(1 == root['a']['c']['d'].count);
 }
 
-void indexSlide(R)(R r, ref Node root) pure
+void indexSlide(R)(R r, ref ShovelNode root) pure
 {
     while (!r.empty)
     {
@@ -175,14 +175,14 @@ void indexSlide(R)(R r, ref Node root) pure
 
 @("indexSlide empty input") unittest
 {
-    Node root;
+    ShovelNode root;
     "".indexSlide(root);
     assert(root.empty);
 }
 
 @("indexSlide single char") unittest
 {
-    Node root;
+    ShovelNode root;
     "a".indexSlide(root);
     assert(1 == root['a'].count);
     assert(root['a'].empty);
@@ -190,7 +190,7 @@ void indexSlide(R)(R r, ref Node root) pure
 
 @("indexSlide string") unittest
 {
-    Node expect, root;
+    ShovelNode expect, root;
     "aabc".index(expect);
     "abc".index(expect);
     "bc".index(expect);
@@ -200,7 +200,7 @@ void indexSlide(R)(R r, ref Node root) pure
     assert(expect == root);
 }
 
-void indexListFile(string name, ref Node root)
+void indexListFile(string name, ref ShovelNode root)
 {
     import std.stdio : File;
     import std.encoding : sanitize;
