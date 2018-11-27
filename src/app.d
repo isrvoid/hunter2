@@ -1,5 +1,6 @@
 import std.range;
-import std.algorithm.comparison : equal;
+import std.algorithm : equal, isSorted;
+import std.meta : allSatisfy;
 
 void main()
 {
@@ -224,4 +225,96 @@ struct Node
     dchar id;
     float f;
     Node[] child;
+}
+
+size_t mergeLength(alias cmp = "a < b ? -1 : a > b ? 1 : 0", R1, R2)(R1 a, R2 b) pure @safe
+if (allSatisfy!(isInputRange, R1, R2))
+in (a.isSorted && b.isSorted, "ranges have to be sorted")
+{
+    import std.functional : binaryFun;
+    auto aLength = a.length, bLength = b.length;
+    size_t count;
+    while (aLength && bLength)
+    {
+        ++count;
+        switch (binaryFun!cmp(a.front, b.front))
+        {
+            case -1:
+                a.popFront();
+                --aLength;
+                break;
+            case 1:
+                b.popFront();
+                --bLength;
+                break;
+            case 0:
+                a.popFront();
+                --aLength;
+                b.popFront();
+                --bLength;
+                break;
+            default: assert(0);
+        }
+    }
+    return count + (aLength | bLength);
+}
+
+@("mergeLength empty input") unittest
+{
+    assert(0 == mergeLength("", ""));
+}
+
+@("mergeLength equal elements merge; single element") unittest
+{
+    assert(1 == mergeLength([0], [0]));
+}
+
+@("mergeLength unequal elements add up; single element") unittest
+{
+    assert(2 == mergeLength([0], [1]));
+    assert(2 == mergeLength([0], [-1]));
+}
+
+@("mergeLength one input empty") unittest
+{
+    assert(1 == mergeLength("a", ""));
+    assert(3 == mergeLength("", "foo"));
+}
+
+@("mergeLength first element equal") unittest
+{
+    assert(3 == mergeLength("ab", "ac"));
+    assert(2 == mergeLength("a", "ab"));
+}
+
+@("mergeLength last element equal") unittest
+{
+    assert(3 == mergeLength("ac", "bc"));
+    assert(2 == mergeLength("ac", "c"));
+    assert(2 == mergeLength("c", "bc"));
+}
+
+@("mergeLength middle element equal") unittest
+{
+    assert(3 == mergeLength("abc", "b"));
+    assert(3 == mergeLength("b", "abc"));
+    assert(4 == mergeLength("ac", "bcd"));
+    assert(4 == mergeLength("acd", "bc"));
+    assert(5 == mergeLength("ace", "bcd"));
+}
+
+@("mergeLength longer input") unittest
+{
+    import std.algorithm : sort, merge, uniq;
+    auto a = "why didn't we use std.algorithm : merge, uniq and walkLength to do the same?"d.dup;
+    auto b = "mergeLength needs to be fast for the optimization to make sense"d.dup;
+    a = a.sort.uniq.array;
+    b = b.sort.uniq.array;
+    size_t expect = merge(a, b).uniq.walkLength;
+    assert(expect == mergeLength(a, b));
+}
+
+@("mergeLength non strictly ordered input") unittest
+{
+    assert(11 == mergeLength("abbceee", "aabbbdeeee"));
 }
