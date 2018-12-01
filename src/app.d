@@ -4,7 +4,20 @@ import std.meta : allSatisfy;
 
 void main()
 {
+    /*
+    Node root;
+    foreach (name; pwLists)
+        indexListFile(name, root);
+     */
 }
+
+enum seclistsDir = "/home/user/devel/SecLists"; // path to github.com/danielmiessler/SecLists
+
+enum pwDir = seclistsDir ~ "/Passwords/";
+enum pwLists = [pwDir ~ "bt4-password.txt",
+             pwDir ~ "darkc0de.txt",
+             pwDir ~ "openwall.net-all.txt",
+             pwDir ~ "Leaked-Databases/md5decryptor.uk.txt"];
 
 struct LimitRepetitions(R, size_t maxRep)
 if (maxRep >= 1)
