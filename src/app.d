@@ -432,3 +432,79 @@ in (a.c == b.c, "Merging nodes should have equal chars")
     a.merge(b);
     assert(expect == a);
 }
+
+Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
+{
+    void toHelper(in ShovelNode[dchar] sn, ref Node[] node) pure nothrow @safe
+    {
+        import std.algorithm.sorting : sort;
+        node.reserve(sn.length);
+        foreach (ref kv; sn.byKeyValue)
+        {
+            auto v = kv.value;
+            Node n = Node(kv.key, v.count);
+            if (v.node)
+                toHelper(v.node, n.child);
+            node ~= n;
+        }
+        node.sort;
+    }
+
+    auto root = Node();
+    root.f = sn.count;
+    toHelper(sn.node, root.child);
+    return root;
+}
+
+@("convert empty node") unittest
+{
+    assert(Node() == ShovelNode().to!Node);
+}
+
+@("convert single char node") unittest
+{
+    Node expect;
+    expect.child = [Node('a', 1)];
+    ShovelNode sn;
+    "a".index(sn);
+    assert(expect == sn.to!Node);
+}
+
+@("convert sequence") unittest
+{
+    Node expect;
+    expect.child = [Node('a', 1, [Node('b', 1, [Node('c', 1)])])];
+    ShovelNode sn;
+    "abc".index(sn);
+    assert(expect == sn.to!Node);
+}
+
+@("convert simple input") unittest
+{
+    Node expect;
+    expect.child = [
+        Node('a', 1, [Node('b', 1,)]),
+        Node('d', 3, [Node('e', 2, [Node('f', 1)])]),
+        Node('g', 1, [Node('h', 1)])
+    ];
+    ShovelNode sn;
+    "ab".index(sn);
+    "def".index(sn);
+    "de".index(sn);
+    "d".index(sn);
+    "gh".index(sn);
+    assert(expect == sn.to!Node);
+}
+
+@("convert sorts") unittest
+{
+    Node expect;
+    expect.child = [Node('a', 5, [Node('a', 1), Node('b', 1), Node('c', 1), Node('d', 1), Node('e', 1)])];
+    ShovelNode sn;
+    "ad".index(sn);
+    "aa".index(sn);
+    "ac".index(sn);
+    "ae".index(sn);
+    "ab".index(sn);
+    assert(expect == sn.to!Node);
+}
