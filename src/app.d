@@ -17,7 +17,10 @@ enum pwDir = seclistsDir ~ "/Passwords/";
 enum pwLists = [pwDir ~ "bt4-password.txt",
              pwDir ~ "darkc0de.txt",
              pwDir ~ "openwall.net-all.txt",
-             pwDir ~ "Leaked-Databases/md5decryptor.uk.txt"];
+             pwDir ~ "Leaked-Databases/alleged-gmail-passwords.txt",
+             pwDir ~ "Leaked-Databases/md5decryptor.uk.txt",
+             //pwDir ~ "Leaked-Databases/rockyou.txt", // needs extracted rockyou.txt.tar.gz
+];
 
 struct LimitRepetitions(R, size_t maxRep)
 if (maxRep >= 1)
@@ -461,7 +464,7 @@ Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
     {
         import std.algorithm.sorting : sort;
         node.reserve(sn.length);
-        foreach (ref kv; sn.byKeyValue)
+        foreach (kv; sn.byKeyValue)
         {
             auto v = kv.value;
             Node n = Node(kv.key, v.count);
@@ -530,3 +533,44 @@ Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
     "ab".index(sn);
     assert(expect == sn.to!Node);
 }
+
+void normalize(ref Node root) pure nothrow
+{
+    foreach (ref child; root.child)
+        child.f = 1.0f;
+}
+
+@("normalize init Node") unittest
+{
+    Node node;
+    node.normalize;
+}
+
+@("normalize single child") unittest
+{
+    auto expect = [Node('a', 1)];
+    auto root = Node();
+    root.child ~= Node('a', 42);
+    root.normalize;
+    assert(expect == root.child);
+}
+
+@("normalize equal f") unittest
+{
+    auto expect = [Node('a', 1), Node('b', 1), Node('c', 1)];
+    auto root = Node();
+    root.child = [Node('a', 42), Node('b', 42), Node('c', 42)];
+    root.normalize;
+    assert(expect == root.child);
+}
+
+@("normalize sets f to realative ratio") unittest
+{
+    auto expect = [Node('a', 1), Node('b', 0.5), Node('c', 0.5)];
+    auto root = Node();
+    root.child = [Node('a', 2), Node('b', 1), Node('c', 1)];
+    root.normalize;
+    assert(expect == root.child);
+}
+
+// TODO recursive
