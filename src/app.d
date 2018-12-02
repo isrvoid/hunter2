@@ -460,7 +460,7 @@ in (a.c == b.c, "Merging nodes should have equal chars")
 
 Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
 {
-    void toHelper(in ShovelNode[dchar] sn, ref Node[] node) pure nothrow @safe
+    static void recurse(in ShovelNode[dchar] sn, ref Node[] node)
     {
         import std.algorithm.sorting : sort;
         node.reserve(sn.length);
@@ -469,7 +469,7 @@ Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
             auto v = kv.value;
             Node n = Node(kv.key, v.count);
             if (v.node)
-                toHelper(v.node, n.child);
+                recurse(v.node, n.child);
             node ~= n;
         }
         node.sort;
@@ -477,7 +477,7 @@ Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
 
     auto root = Node();
     root.f = sn.count;
-    toHelper(sn.node, root.child);
+    recurse(sn.node, root.child);
     return root;
 }
 
@@ -534,10 +534,20 @@ Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
     assert(expect == sn.to!Node);
 }
 
-void normalize(ref Node root) pure nothrow
+void normalize(ref Node root) pure nothrow @safe
 {
-    foreach (ref child; root.child)
-        child.f = 1.0f;
+    static void recurse(Node[] child)
+    {
+        import std.algorithm : map, fold, max;
+        immutable fNorm = 1.0f / child.map!"a.f".fold!max(0.0f);
+        foreach (ref n; child)
+        {
+            n.f *= fNorm;
+            if (n.child.length)
+                recurse(n.child);
+        }
+    }
+    recurse(root.child);
 }
 
 @("normalize init Node") unittest
@@ -573,4 +583,17 @@ void normalize(ref Node root) pure nothrow
     assert(expect == root.child);
 }
 
-// TODO recursive
+@("normalize is recursive") unittest
+{
+    auto expect = [
+        Node('a', 0.75, [Node('b', 1, [Node('c', 0.5), Node('d', 1)])]),
+        Node('e', 1, [Node('f', 1), Node('g', 0.25)])
+    ];
+    auto root = Node();
+    root.child = [
+        Node('a', 6, [Node('b', 3, [Node('c', 1), Node('d', 2)])]),
+        Node('e', 8, [Node('f', 4), Node('g', 1)])
+    ];
+    root.normalize;
+    assert(expect == root.child);
+}
