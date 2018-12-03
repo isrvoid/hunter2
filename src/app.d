@@ -5,7 +5,7 @@ import std.meta : allSatisfy;
 void main()
 {
     /*
-    Node root;
+    DNode root;
     foreach (name; pwLists)
         indexListFile(name, root);
      */
@@ -217,7 +217,7 @@ void indexSlide(R)(R r, ref ShovelNode root) pure
     assert(expect == root);
 }
 
-void indexListFile(string name, ref Node root, size_t shovelSize = 25_000)
+void indexListFile(string name, ref DNode root, size_t shovelSize = 25_000)
 {
     import std.stdio : File;
     import std.encoding : sanitize;
@@ -238,20 +238,20 @@ void indexListFile(string name, ref Node root, size_t shovelSize = 25_000)
 
         if (++lineCount % shovelSize == 0)
         {
-            merge(root, shovel.to!Node);
+            merge(root, shovel.to!DNode);
             shovel = ShovelNode();
         }
     }
-    merge(root, shovel.to!Node);
+    merge(root, shovel.to!DNode);
 }
 
-struct Node
+struct DNode
 {
     dchar c;
     float f = 0.0f;
-    Node[] child;
+    DNode[] child;
 
-    int opCmp(ref const Node other) const pure nothrow @safe
+    int opCmp(ref const DNode other) const pure nothrow @safe
     {
         return (c > other.c) - (c < other.c);
     }
@@ -349,7 +349,7 @@ in (a.isSorted && b.isSorted, "ranges should be sorted")
     assert(11 == mergeLength("abbceee", "aabbbdeeee"));
 }
 
-void merge(ref Node a, Node b) pure nothrow @safe
+void merge(ref DNode a, DNode b) pure nothrow @safe
 in (a.c == b.c, "Merging nodes should have equal chars")
 {
     a.f += b.f;
@@ -383,91 +383,91 @@ in (a.c == b.c, "Merging nodes should have equal chars")
 
 @("merge init nodes") unittest
 {
-    Node a;
-    a.merge(Node());
-    assert(a == Node());
+    DNode a;
+    a.merge(DNode());
+    assert(a == DNode());
 }
 
 @("merge adds f") unittest
 {
-    auto a = Node('a', 0.5);
-    a.merge(Node('a', 0));
-    assert(Node('a', 0.5) == a);
-    a.merge(Node('a', 0.5));
-    assert(Node('a', 1) == a);
+    auto a = DNode('a', 0.5);
+    a.merge(DNode('a', 0));
+    assert(DNode('a', 0.5) == a);
+    a.merge(DNode('a', 0.5));
+    assert(DNode('a', 1) == a);
 }
 
 @("merge leaf f(0) node has no effect") unittest
 {
-    auto expect = Node('a', 42, [Node('a'), Node('b')]);
+    auto expect = DNode('a', 42, [DNode('a'), DNode('b')]);
     auto node = expect;
-    node.merge(Node('a'));
+    node.merge(DNode('a'));
     assert(expect == node);
 }
 
 @("merge into leaf f(0) node effectively overwrites it") unittest
 {
-    auto expect = Node('a', 42, [Node('a'), Node('b')]);
-    auto node = Node('a');
+    auto expect = DNode('a', 42, [DNode('a'), DNode('b')]);
+    auto node = DNode('a');
     node.merge(expect);
     assert(expect == node);
 }
 
 @("merge unequal children") unittest
 {
-    auto expect = Node('x', 0, [Node('a', 1), Node('b', 2)]);
-    auto node = Node('x', 0, [Node('a', 1)]);
-    node.merge(Node('x', 0, [Node('b', 2)]));
+    auto expect = DNode('x', 0, [DNode('a', 1), DNode('b', 2)]);
+    auto node = DNode('x', 0, [DNode('a', 1)]);
+    node.merge(DNode('x', 0, [DNode('b', 2)]));
     assert(expect == node);
 }
 
 @("merge children preserves order") unittest
 {
-    auto expect = Node('x', 0, [Node('a', 1), Node('b', 2)]);
-    auto node = Node('x', 0, [Node('b', 2)]);
-    node.merge(Node('x', 0, [Node('a', 1)]));
+    auto expect = DNode('x', 0, [DNode('a', 1), DNode('b', 2)]);
+    auto node = DNode('x', 0, [DNode('b', 2)]);
+    node.merge(DNode('x', 0, [DNode('a', 1)]));
     assert(expect == node);
 }
 
 @("merge adds child's f") unittest
 {
-    auto expect = Node('x', 0, [Node('a', 2)]);
-    auto node = Node('x', 0, [Node('a', 1)]);
+    auto expect = DNode('x', 0, [DNode('a', 2)]);
+    auto node = DNode('x', 0, [DNode('a', 1)]);
     node.merge(node);
     assert(expect == node);
 }
 
 @("merge depth > 2") unittest
 {
-    auto a = Node('x', 1, [
-            Node('a', 2, [Node('A', 5)]),
-            Node('b', 3, [Node('B', 6, [Node('1', 8)])]),
-            Node('d', 4, [Node('C', 7)])]);
-    auto b = Node('x', 10, [
-            Node('a', 20, [Node('A', 50)]),
-            Node('b', 30, [Node('B', 60, [Node('0', 90), Node('1', 80)])]),
-            Node('c', 35),
-            Node('d', 40, [Node('C', 70)])]);
-    auto expect = Node('x', 11, [
-            Node('a', 22, [Node('A', 55)]),
-            Node('b', 33, [Node('B', 66, [Node('0', 90), Node('1', 88)])]),
-            Node('c', 35),
-            Node('d', 44, [Node('C', 77)])]);
+    auto a = DNode('x', 1, [
+            DNode('a', 2, [DNode('A', 5)]),
+            DNode('b', 3, [DNode('B', 6, [DNode('1', 8)])]),
+            DNode('d', 4, [DNode('C', 7)])]);
+    auto b = DNode('x', 10, [
+            DNode('a', 20, [DNode('A', 50)]),
+            DNode('b', 30, [DNode('B', 60, [DNode('0', 90), DNode('1', 80)])]),
+            DNode('c', 35),
+            DNode('d', 40, [DNode('C', 70)])]);
+    auto expect = DNode('x', 11, [
+            DNode('a', 22, [DNode('A', 55)]),
+            DNode('b', 33, [DNode('B', 66, [DNode('0', 90), DNode('1', 88)])]),
+            DNode('c', 35),
+            DNode('d', 44, [DNode('C', 77)])]);
 
     a.merge(b);
     assert(expect == a);
 }
 
-Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
+DNode to(T : DNode)(in ShovelNode sn) pure nothrow @safe
 {
-    static void recurse(in ShovelNode[dchar] sn, ref Node[] node)
+    static void recurse(in ShovelNode[dchar] sn, ref DNode[] node)
     {
         import std.algorithm.sorting : sort;
         node.reserve(sn.length);
         foreach (kv; sn.byKeyValue)
         {
             auto v = kv.value;
-            Node n = Node(kv.key, v.count);
+            DNode n = DNode(kv.key, v.count);
             if (v.node)
                 recurse(v.node, n.child);
             node ~= n;
@@ -475,7 +475,7 @@ Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
         node.sort;
     }
 
-    auto root = Node();
+    auto root = DNode();
     root.f = sn.count;
     recurse(sn.node, root.child);
     return root;
@@ -483,34 +483,34 @@ Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
 
 @("convert empty node") unittest
 {
-    assert(Node() == ShovelNode().to!Node);
+    assert(DNode() == ShovelNode().to!DNode);
 }
 
 @("convert single char node") unittest
 {
-    Node expect;
-    expect.child = [Node('a', 1)];
+    DNode expect;
+    expect.child = [DNode('a', 1)];
     ShovelNode sn;
     "a".index(sn);
-    assert(expect == sn.to!Node);
+    assert(expect == sn.to!DNode);
 }
 
 @("convert sequence") unittest
 {
-    Node expect;
-    expect.child = [Node('a', 1, [Node('b', 1, [Node('c', 1)])])];
+    DNode expect;
+    expect.child = [DNode('a', 1, [DNode('b', 1, [DNode('c', 1)])])];
     ShovelNode sn;
     "abc".index(sn);
-    assert(expect == sn.to!Node);
+    assert(expect == sn.to!DNode);
 }
 
 @("convert simple input") unittest
 {
-    Node expect;
+    DNode expect;
     expect.child = [
-        Node('a', 1, [Node('b', 1,)]),
-        Node('d', 3, [Node('e', 2, [Node('f', 1)])]),
-        Node('g', 1, [Node('h', 1)])
+        DNode('a', 1, [DNode('b', 1,)]),
+        DNode('d', 3, [DNode('e', 2, [DNode('f', 1)])]),
+        DNode('g', 1, [DNode('h', 1)])
     ];
     ShovelNode sn;
     "ab".index(sn);
@@ -518,25 +518,25 @@ Node to(T : Node)(in ShovelNode sn) pure nothrow @safe
     "de".index(sn);
     "d".index(sn);
     "gh".index(sn);
-    assert(expect == sn.to!Node);
+    assert(expect == sn.to!DNode);
 }
 
 @("convert sorts") unittest
 {
-    Node expect;
-    expect.child = [Node('a', 5, [Node('a', 1), Node('b', 1), Node('c', 1), Node('d', 1), Node('e', 1)])];
+    DNode expect;
+    expect.child = [DNode('a', 5, [DNode('a', 1), DNode('b', 1), DNode('c', 1), DNode('d', 1), DNode('e', 1)])];
     ShovelNode sn;
     "ad".index(sn);
     "aa".index(sn);
     "ac".index(sn);
     "ae".index(sn);
     "ab".index(sn);
-    assert(expect == sn.to!Node);
+    assert(expect == sn.to!DNode);
 }
 
-void normalize(ref Node root) pure nothrow @safe
+void normalize(ref DNode root) pure nothrow @safe
 {
-    static void recurse(Node[] child)
+    static void recurse(DNode[] child)
     {
         import std.algorithm : map, fold, max;
         immutable fNorm = 1.0f / child.map!"a.f".fold!max(0.0f);
@@ -550,35 +550,35 @@ void normalize(ref Node root) pure nothrow @safe
     recurse(root.child);
 }
 
-@("normalize init Node") unittest
+@("normalize init DNode") unittest
 {
-    Node node;
+    DNode node;
     node.normalize;
 }
 
 @("normalize single child") unittest
 {
-    auto expect = [Node('a', 1)];
-    auto root = Node();
-    root.child ~= Node('a', 42);
+    auto expect = [DNode('a', 1)];
+    auto root = DNode();
+    root.child ~= DNode('a', 42);
     root.normalize;
     assert(expect == root.child);
 }
 
 @("normalize equal f") unittest
 {
-    auto expect = [Node('a', 1), Node('b', 1), Node('c', 1)];
-    auto root = Node();
-    root.child = [Node('a', 42), Node('b', 42), Node('c', 42)];
+    auto expect = [DNode('a', 1), DNode('b', 1), DNode('c', 1)];
+    auto root = DNode();
+    root.child = [DNode('a', 42), DNode('b', 42), DNode('c', 42)];
     root.normalize;
     assert(expect == root.child);
 }
 
 @("normalize sets f to realative ratio") unittest
 {
-    auto expect = [Node('a', 1), Node('b', 0.5), Node('c', 0.5)];
-    auto root = Node();
-    root.child = [Node('a', 2), Node('b', 1), Node('c', 1)];
+    auto expect = [DNode('a', 1), DNode('b', 0.5), DNode('c', 0.5)];
+    auto root = DNode();
+    root.child = [DNode('a', 2), DNode('b', 1), DNode('c', 1)];
     root.normalize;
     assert(expect == root.child);
 }
@@ -586,13 +586,13 @@ void normalize(ref Node root) pure nothrow @safe
 @("normalize is recursive") unittest
 {
     auto expect = [
-        Node('a', 0.75, [Node('b', 1, [Node('c', 0.5), Node('d', 1)])]),
-        Node('e', 1, [Node('f', 1), Node('g', 0.25)])
+        DNode('a', 0.75, [DNode('b', 1, [DNode('c', 0.5), DNode('d', 1)])]),
+        DNode('e', 1, [DNode('f', 1), DNode('g', 0.25)])
     ];
-    auto root = Node();
+    auto root = DNode();
     root.child = [
-        Node('a', 6, [Node('b', 3, [Node('c', 1), Node('d', 2)])]),
-        Node('e', 8, [Node('f', 4), Node('g', 1)])
+        DNode('a', 6, [DNode('b', 3, [DNode('c', 1), DNode('d', 2)])]),
+        DNode('e', 8, [DNode('f', 4), DNode('g', 1)])
     ];
     root.normalize;
     assert(expect == root.child);
