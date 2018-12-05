@@ -597,3 +597,28 @@ void normalize(ref DNode root) pure nothrow @safe
     root.normalize;
     assert(expect == root.child);
 }
+
+struct Node
+{
+    dchar c;
+    float f = 0.0f;
+    uint child;
+}
+
+struct StoreHeader
+{
+    union ver
+    {
+        struct
+        {
+            ubyte number = 1;
+            ubyte nodeSize = Node.sizeof;
+            ubyte dataOffset = 6; // log2
+        }
+        ulong sum;
+    }
+    uint[4] nodeCount;
+}
+
+// TODO
+// void recurse(alias pred)(ref DNode root);
