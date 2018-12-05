@@ -181,11 +181,14 @@ void index(R)(auto ref R r, ref ShovelNode node) pure
     assert(1 == root['a']['c']['d'].count);
 }
 
-void indexSlide(R)(R r, ref ShovelNode root) pure
+void indexSlide(size_t windowSize = 0, R)(R r, ref ShovelNode root) pure
 {
     while (!r.empty)
     {
-        r.save.index(root);
+        static if (windowSize > 0)
+            r.take(windowSize).index(root);
+        else
+            r.save.index(root);
         r.popFront();
     }
 }
@@ -217,6 +220,33 @@ void indexSlide(R)(R r, ref ShovelNode root) pure
     assert(expect == root);
 }
 
+@("indexSlide window") unittest
+{
+    ShovelNode expect, root;
+    "the".index(expect);
+    "he ".index(expect);
+    "e q".index(expect);
+    " qu".index(expect);
+    "qui".index(expect);
+    "uic".index(expect);
+    "ick".index(expect);
+    "ck ".index(expect);
+    "k b".index(expect);
+    " br".index(expect);
+    "bro".index(expect);
+    "row".index(expect);
+    "own".index(expect);
+    "wn ".index(expect);
+    "n f".index(expect);
+    " fo".index(expect);
+    "fox".index(expect);
+    "ox".index(expect);
+    "x".index(expect);
+
+    "the quick brown fox".indexSlide!3(root);
+    assert(expect == root);
+}
+
 void indexListFile(string name, ref DNode root, size_t shovelSize = 25_000)
 {
     import std.stdio : File;
@@ -232,9 +262,9 @@ void indexListFile(string name, ref DNode root, size_t shovelSize = 25_000)
             .strip
             .asLowerCase
             .limitRepetitions!3
-            .take(32)
+            .take(28)
             .array
-            .indexSlide(shovel);
+            .indexSlide!12(shovel);
 
         if (++lineCount % shovelSize == 0)
         {
