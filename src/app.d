@@ -628,10 +628,91 @@ void normalize(ref DNode root) pure nothrow @safe
     assert(expect == root.child);
 }
 
+struct Ratio
+{
+    import std.math : exp, log;
+
+    this(double val)
+    in (val >= 0.0 && val <= 1.0)
+    {
+        if (val <= zeroStep)
+            ratio = ushort.max;
+        else
+            ratio = cast(ushort)(log(val) / f + 0.5);
+    }
+
+    @property double toDouble()
+    out (r; r >= 0.0 && r <= 1.0)
+    {
+        return ratio == ushort.max ? 0.0 : exp(ratio * f);
+    }
+    alias toDouble this;
+
+    void opAssign(double rhs)
+    {
+        this = Ratio(rhs);
+    }
+
+private:
+    enum zeroStep = 1e-7;
+    enum f = log(zeroStep) / (ushort.max - 1);
+    ushort ratio = ushort.max;
+}
+
+@("Ratio.init") unittest
+{
+    Ratio r;
+    assert(0.0 == r);
+}
+
+@("Ratio ctor min max") unittest
+{
+    assert(0.0 == Ratio(0.0));
+    assert(1.0 == Ratio(1.0));
+}
+
+@("Ratio assign min max") unittest
+{
+    Ratio r;
+    r = 0.0;
+    assert(0.0 == r);
+    r = 1.0;
+    assert(1.0 == r);
+}
+
+version (unittest)
+{
+    import std.math : sqrt, approxEqual;
+    enum goldenRatio = (1 + sqrt(5.0)) / 2;
+    enum ratioRelPrecision = 1.25e-4;
+}
+
+@("Ratio precision") unittest
+{
+    enum inc = goldenRatio * 1e-3;
+    foreach (v; iota(0.0, 1.0, inc))
+        assert(approxEqual(v, Ratio(v), ratioRelPrecision, 1e-7));
+}
+
+@("Ratio precision around 0") unittest
+{
+    enum inc = goldenRatio * 1e-8;
+    foreach (v; iota(0.0, 1e-5, inc))
+        assert(approxEqual(v, Ratio(v), ratioRelPrecision, 1e-7));
+}
+
+@("Ratio precision around 1") unittest
+{
+    enum inc = goldenRatio * 1e-6;
+    foreach (v; iota(0.999, 1.0, inc))
+        assert(approxEqual(v, Ratio(v), ratioRelPrecision, 1e-7));
+}
+
+static assert(Node.sizeof == 8);
 struct Node
 {
-    dchar c;
-    float f = 0.0f;
+    ushort c;
+    Ratio f;
     uint child;
 }
 
@@ -647,7 +728,7 @@ struct StoreHeader
         }
         ulong sum;
     }
-    uint[4] nodeCount;
+    uint[3] groupCount;
 }
 
 // TODO
