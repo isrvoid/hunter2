@@ -1,5 +1,5 @@
 import std.range;
-import std.algorithm : equal, isSorted;
+import std.algorithm;
 import std.meta : allSatisfy;
 
 void main()
@@ -9,6 +9,15 @@ void main()
     foreach (name; pwLists)
         indexListFile(name, root);
      */
+}
+
+void writeToFile(string name, DNode root)
+{
+    import std.stdio : File;
+    auto file = File(name, "wb");
+    StoreHeader header;
+    file.seek(header.dataOffset);
+    // FIXME
 }
 
 enum seclistsDir = "/home/user/devel/SecLists"; // path to github.com/danielmiessler/SecLists
@@ -365,12 +374,11 @@ in (a.isSorted && b.isSorted, "ranges should be sorted")
 
 @("mergeLength longer input") unittest
 {
-    import std.algorithm : sort, merge, uniq;
     auto a = "why didn't we use std.algorithm : merge, uniq and walkLength to do the same?"d.dup;
     auto b = "mergeLength needs to be fast for the optimization to make sense"d.dup;
     a = a.sort.uniq.array;
     b = b.sort.uniq.array;
-    size_t expect = merge(a, b).uniq.walkLength;
+    size_t expect = std.algorithm.merge(a, b).uniq.walkLength;
     assert(expect == mergeLength(a, b));
 }
 
@@ -492,7 +500,6 @@ DNode to(T : DNode)(in ShovelNode sn) pure nothrow @safe
 {
     static void recurse(in ShovelNode[dchar] sn, ref DNode[] node)
     {
-        import std.algorithm.sorting : sort;
         node.reserve(sn.length);
         foreach (kv; sn.byKeyValue)
         {
@@ -566,18 +573,12 @@ DNode to(T : DNode)(in ShovelNode sn) pure nothrow @safe
 
 void normalize(ref DNode root) pure nothrow @safe
 {
-    static void recurse(DNode[] child)
+    auto fun = function(ref DNode node)
     {
-        import std.algorithm : map, fold, max;
-        immutable fNorm = 1.0f / child.map!"a.f".fold!max(0.0f);
-        foreach (ref n; child)
-        {
-            n.f *= fNorm;
-            if (n.child.length)
-                recurse(n.child);
-        }
-    }
-    recurse(root.child);
+        immutable fNorm = 1.0f / node.child.map!"a.f".fold!max(0.0f);
+        node.child.each!((ref a) { a.f *= fNorm; });
+    };
+    recurse!fun(root);
 }
 
 @("normalize init DNode") unittest
@@ -718,7 +719,7 @@ struct Node
 
 struct StoreHeader
 {
-    union ver
+    union
     {
         struct
         {
@@ -726,10 +727,17 @@ struct StoreHeader
             ubyte nodeSize = Node.sizeof;
             ubyte dataOffset = 6; // log2
         }
-        ulong sum;
+        ulong ver;
     }
     uint[3] groupCount;
+    ubyte[4] crc;
 }
 
-// TODO
-// void recurse(alias pred)(ref DNode root);
+void recurse(alias pred)(ref DNode node) pure
+    if (__traits(compiles, pred(node)))
+{
+    import std.functional : unaryFun;
+    unaryFun!pred(node);
+    foreach (ref e; node.child)
+        recurse!pred(e);
+}
