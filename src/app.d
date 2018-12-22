@@ -11,13 +11,70 @@ void main()
      */
 }
 
+auto checkCompactFit(DNode root)
+{
+    enum Result
+    {
+        ok,
+        index1,
+        index2,
+        indexMult,
+        charCast,
+        maxLength,
+        multNodeCount
+    }
+
+    size_t count1 = 1, count2, countMult;
+    dchar maxChar;
+    size_t maxLength, multNodeCount;
+
+    root.recurse!((ref DNode n)
+    {
+        immutable length = n.child.length;
+        if (length == 1)
+            ++count1;
+        else if (length == 2)
+            ++count2;
+        else if (length >= 3)
+        {
+            ++countMult;
+            multNodeCount += length;
+            maxLength = max(maxLength, length);
+        }
+        maxChar = max(maxChar, n.c);
+    });
+
+    if (count1 > NodeIndexLimit.end1 - NodeIndexLimit.start1)
+        return Result.index1;
+
+    if (count2 > NodeIndexLimit.end2 - NodeIndexLimit.start2)
+        return Result.index2;
+
+    if (countMult > NodeIndexLimit.endMult - NodeIndexLimit.startMult)
+        return Result.indexMult;
+
+    if (maxChar > ushort.max)
+        return Result.charCast;
+
+    if (maxLength > ushort.max)
+        return Result.maxLength;
+
+    if (multNodeCount - 1 > uint.max)
+        return Result.multNodeCount;
+
+    return Result.ok;
+}
+
 void writeToFile(string name, DNode root)
 {
     import std.stdio : File;
     auto file = File(name, "wb");
     StoreHeader header;
-    file.seek(header.dataOffset);
+    file.seek(1 << header.dataOffset);
     // FIXME
+
+    file.seek(0);
+    file.rawWrite([header]);
 }
 
 enum seclistsDir = "/home/user/devel/SecLists"; // path to github.com/danielmiessler/SecLists
@@ -740,4 +797,14 @@ void recurse(alias pred)(ref DNode node) pure
     unaryFun!pred(node);
     foreach (ref e; node.child)
         recurse!pred(e);
+}
+
+enum NodeIndexLimit : uint
+{
+    start1 = 1,
+    end1 = start2,
+    start2 = 0b11 << 30,
+    end2 = startMult,
+    startMult = 0b111 << 29,
+    endMult = uint.max
 }
