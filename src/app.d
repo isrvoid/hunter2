@@ -1,32 +1,62 @@
 import std.range;
 import std.algorithm;
 import std.meta : allSatisfy;
+import std.stdio : writeln;
+
+enum seclistsDir = "/home/user/devel/SecLists"; // path to github.com/danielmiessler/SecLists
+
+enum pwDir = seclistsDir ~ "/Passwords/";
+enum pwLists = [pwDir ~ "bt4-password.txt",
+             pwDir ~ "darkc0de.txt",
+             pwDir ~ "openwall.net-all.txt",
+             pwDir ~ "Leaked-Databases/alleged-gmail-passwords.txt",
+             pwDir ~ "Leaked-Databases/md5decryptor.uk.txt",
+             //pwDir ~ "Leaked-Databases/rockyou.txt", // needs extracted rockyou.txt.tar.gz
+];
 
 void main()
 {
-    /*
-    DNode root;
-    foreach (name; pwLists)
-        indexListFile(name, root);
-     */
+    // TODO getopt
+version (unittest) { } else
+{
+    DNode root = parseLists(pwLists);
+    store(root, "/tmp/nodes");
+}
 }
 
-auto checkCompactFit(DNode root)
+DNode parseLists(string[] names)
 {
-    enum Result
+    import std.path : baseName;
+    DNode root;
+    foreach (i, name; names)
     {
-        ok,
-        index1,
-        index2,
-        indexMult,
-        charCast,
-        maxLength,
-        multNodeCount
+        writeln("Parsing list ", i + 1, "/", pwLists.length, ": '", name.baseName, "'");
+        indexListFile(name, root);
     }
 
-    size_t count1 = 1, count2, countMult;
-    dchar maxChar;
-    size_t maxLength, multNodeCount;
+    normalize(root);
+    root.c = 0;
+    return root;
+}
+
+void store(DNode root, string name)
+{
+    import std.conv : to;
+    immutable stats = getStats(root);
+    immutable check = checkCompactFit(stats);
+    if (check)
+        throw new Exception("Can't store compactly: " ~ check.to!string);
+
+    writeToFile(root, name, stats);
+}
+
+alias Stats = typeof(getStats(DNode()));
+
+auto getStats(DNode root)
+{
+    import std.typecons : tuple;
+    size_t count1 = 1, count2, countMult, multNodeCount;
+    dchar maxChar = 0;
 
     root.recurse!((ref DNode n)
     {
@@ -39,54 +69,102 @@ auto checkCompactFit(DNode root)
         {
             ++countMult;
             multNodeCount += length;
-            maxLength = max(maxLength, length);
         }
         maxChar = max(maxChar, n.c);
     });
 
-    if (count1 > NodeIndexLimit.end1 - NodeIndexLimit.start1)
+    return tuple!("count1", "count2", "countMult", "multNodeCount", "maxChar")
+        (count1, count2, countMult, multNodeCount, maxChar);
+}
+
+auto checkCompactFit(Stats stats)
+{
+    enum Result
+    {
+        ok,
+        index1,
+        index2,
+        indexMult,
+        charCast,
+        multNodeCount
+    }
+
+    if (stats.count1 > NodeIndexLimit.end1 - NodeIndexLimit.start1)
         return Result.index1;
 
-    if (count2 > NodeIndexLimit.end2 - NodeIndexLimit.start2)
+    if (stats.count2 > NodeIndexLimit.end2 - NodeIndexLimit.start2)
         return Result.index2;
 
-    if (countMult > NodeIndexLimit.endMult - NodeIndexLimit.startMult)
+    if (stats.countMult > NodeIndexLimit.endMult - NodeIndexLimit.startMult)
         return Result.indexMult;
 
-    if (maxChar > ushort.max)
+    if (stats.maxChar > ushort.max)
         return Result.charCast;
 
-    if (maxLength > ushort.max)
-        return Result.maxLength;
-
-    if (multNodeCount - 1 > uint.max)
+    if (stats.multNodeCount > uint.max) // count+1 index marks end of last group
         return Result.multNodeCount;
 
     return Result.ok;
 }
 
-void writeToFile(string name, DNode root)
+struct BufWriter(T, size_t bs = 4 * 1024^^2)
+{
+    import std.stdio : File;
+    this(File* _file, size_t _pos)
+    {
+        file = _file;
+        pos = _pos;
+        app.reserve(bufElements);
+    }
+
+    ~this()
+    {
+        write();
+    }
+
+    void write(ref const T val)
+    {
+        app ~= val;
+        if (app.data.length >= bufElements)
+            write();
+    }
+
+private:
+    void write()
+    {
+        file.seek(pos);
+        file.rawWrite(app.data);
+        pos += app.data.length * T.sizeof;
+        app.clear();
+    }
+
+    File* file;
+    Appender!(T[]) app;
+    size_t pos;
+    enum bufElements = bs / T.sizeof + 1;
+}
+
+void writeToFile(DNode root, string name, Stats stats)
 {
     import std.stdio : File;
     auto file = File(name, "wb");
     StoreHeader header;
-    file.seek(1 << header.dataOffset);
+    header.groupCount[0] = cast(uint) stats.count1;
+    header.groupCount[1] = cast(uint) stats.count2;
+    header.groupCount[2] = cast(uint) stats.countMult;
+    size_t pos = 1 << header.dataOffsetLog2;
+    auto writer1 = BufWriter!Node(&file, pos);
+    pos += stats.count1 * Node.sizeof;
+    auto writer2 = BufWriter!Node(&file, pos);
+    pos += stats.count2 * 2 * Node.sizeof;
+    auto writerMultIndex = BufWriter!uint(&file, pos);
+    pos += (stats.countMult + 1) * uint.sizeof;
+    auto writerMult = BufWriter!Node(&file, pos);
     // FIXME
 
     file.seek(0);
     file.rawWrite([header]);
 }
-
-enum seclistsDir = "/home/user/devel/SecLists"; // path to github.com/danielmiessler/SecLists
-
-enum pwDir = seclistsDir ~ "/Passwords/";
-enum pwLists = [pwDir ~ "bt4-password.txt",
-             pwDir ~ "darkc0de.txt",
-             pwDir ~ "openwall.net-all.txt",
-             pwDir ~ "Leaked-Databases/alleged-gmail-passwords.txt",
-             pwDir ~ "Leaked-Databases/md5decryptor.uk.txt",
-             //pwDir ~ "Leaked-Databases/rockyou.txt", // needs extracted rockyou.txt.tar.gz
-];
 
 struct LimitRepetitions(R, size_t maxRep)
 if (maxRep >= 1)
@@ -782,7 +860,7 @@ struct StoreHeader
         {
             ubyte number = 1;
             ubyte nodeSize = Node.sizeof;
-            ubyte dataOffset = 6; // log2
+            ubyte dataOffsetLog2 = 6;
         }
         ulong ver;
     }
@@ -801,7 +879,7 @@ void recurse(alias pred)(ref DNode node) pure
 
 enum NodeIndexLimit : uint
 {
-    start1 = 1,
+    start1 = 0,
     end1 = start2,
     start2 = 0b11 << 30,
     end2 = startMult,
