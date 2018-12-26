@@ -2,6 +2,8 @@ import std.range;
 import std.algorithm;
 import std.meta : allSatisfy;
 import std.stdio : writeln;
+import std.traits : ReturnType;
+import std.typecons : Tuple, tuple;
 
 enum seclistsDir = "/home/user/devel/SecLists"; // path to github.com/danielmiessler/SecLists
 
@@ -35,26 +37,17 @@ DNode parseLists(string[] names)
     }
 
     normalize(root);
-    root.c = 0;
     return root;
 }
 
 void store(DNode root, string name)
 {
-    import std.conv : to;
-    immutable stats = getStats(root);
-    immutable check = checkCompactFit(stats);
-    if (check)
-        throw new Exception("Can't store compactly: " ~ check.to!string);
-
-    writeToFile(root, name, stats);
+    const nodes = compact(root);
+    writeToFile(nodes, name);
 }
-
-alias Stats = typeof(getStats(DNode()));
 
 auto getStats(DNode root)
 {
-    import std.typecons : tuple;
     size_t count1 = 1, count2, countMult, multNodeCount;
     dchar maxChar = 0;
 
@@ -77,7 +70,7 @@ auto getStats(DNode root)
         (count1, count2, countMult, multNodeCount, maxChar);
 }
 
-auto checkCompactFit(Stats stats)
+auto checkCompactFit(ReturnType!getStats stats)
 {
     enum Result
     {
@@ -107,63 +100,63 @@ auto checkCompactFit(Stats stats)
     return Result.ok;
 }
 
-struct BufWriter(T, size_t bs = 4 * 1024^^2)
+alias NodeStore = Tuple!(Node[], Node[], uint[], Node[]);
+
+NodeStore compact(DNode root)
 {
-    import std.stdio : File;
-    this(File* _file, size_t _pos)
-    {
-        file = _file;
-        pos = _pos;
-        app.reserve(bufElements);
-    }
+    import std.conv : to;
 
-    ~this()
-    {
-        write();
-    }
+    immutable stats = getStats(root);
+    immutable check = checkCompactFit(stats);
+    if (check)
+        throw new Exception("Can't store compactly: " ~ check.to!string);
 
-    void write(ref const T val)
-    {
-        app ~= val;
-        if (app.data.length >= bufElements)
-            write();
-    }
+    NodeStore ns;
+    ns[0].length = stats.count1;
+    ns[1].length = stats.count2;
+    ns[2].length = stats.countMult + 1;
+    ns[3].length = stats.multNodeCount;
+    // FIXME
 
-private:
-    void write()
+    uint[3] index = [NodeIndexLimit.start1, NodeIndexLimit.start2, NodeIndexLimit.startMult];
+    uint multIndex;
+    assert(root.child.length > 2);
+    ns[0][0] = Node(cast(ushort) root.c, Ratio(root.f), index[2]);
+    root.recurse!((ref DNode n)
     {
-        file.seek(pos);
-        file.rawWrite(app.data);
-        pos += app.data.length * T.sizeof;
-        app.clear();
-    }
-
-    File* file;
-    Appender!(T[]) app;
-    size_t pos;
-    enum bufElements = bs / T.sizeof + 1;
+        //n = Node(cast(ushort) n.c, Ratio(n.f));
+        switch (n.child.length)
+        {
+            case 0:
+                break;
+            case 1:
+                ++index[0];
+                break;
+            case 2:
+                ++index[1];
+                break;
+            default:
+                ++index[2];
+                multIndex += n.child.length;
+                break;
+        }
+    });
+    return ns;
 }
 
-void writeToFile(DNode root, string name, Stats stats)
+void writeToFile(in ReturnType!compact nodes, string name)
 {
     import std.stdio : File;
     auto file = File(name, "wb");
     StoreHeader header;
-    header.groupCount[0] = cast(uint) stats.count1;
-    header.groupCount[1] = cast(uint) stats.count2;
-    header.groupCount[2] = cast(uint) stats.countMult;
-    size_t pos = 1 << header.dataOffsetLog2;
-    auto writer1 = BufWriter!Node(&file, pos);
-    pos += stats.count1 * Node.sizeof;
-    auto writer2 = BufWriter!Node(&file, pos);
-    pos += stats.count2 * 2 * Node.sizeof;
-    auto writerMultIndex = BufWriter!uint(&file, pos);
-    pos += (stats.countMult + 1) * uint.sizeof;
-    auto writerMult = BufWriter!Node(&file, pos);
-    // FIXME
-
-    file.seek(0);
+    header.groupCount[0] = cast(uint) nodes[0].length;
+    header.groupCount[1] = cast(uint) nodes[1].length / 2;
+    header.groupCount[2] = cast(uint) nodes[2].length - 1;
     file.rawWrite([header]);
+
+    file.seek(1 << header.dataOffsetLog2);
+    foreach (a; nodes)
+        file.rawWrite(a);
 }
 
 struct LimitRepetitions(R, size_t maxRep)
@@ -865,7 +858,6 @@ struct StoreHeader
         ulong ver;
     }
     uint[3] groupCount;
-    ubyte[4] crc;
 }
 
 void recurse(alias pred)(ref DNode node) pure
