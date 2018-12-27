@@ -42,7 +42,9 @@ DNode parseLists(string[] names)
 
 void store(DNode root, string name)
 {
+    writeln("Packing");
     const nodes = compact(root);
+    writeln("Writing: '", name, "'");
     writeToFile(nodes, name);
 }
 
@@ -105,44 +107,57 @@ alias NodeStore = Tuple!(Node[], Node[], uint[], Node[]);
 NodeStore compact(DNode root)
 {
     import std.conv : to;
-
     immutable stats = getStats(root);
     immutable check = checkCompactFit(stats);
     if (check)
-        throw new Exception("Can't store compactly: " ~ check.to!string);
+        throw new Exception("Can't compact: " ~ check.to!string);
 
     NodeStore ns;
     ns[0].length = stats.count1;
-    ns[1].length = stats.count2;
+    ns[1].length = stats.count2 * 2;
     ns[2].length = stats.countMult + 1;
     ns[3].length = stats.multNodeCount;
-    // FIXME
 
-    uint[3] index = [NodeIndexLimit.start1, NodeIndexLimit.start2, NodeIndexLimit.startMult];
+    uint[3] index;
     uint multIndex;
-    assert(root.child.length > 2);
-    ns[0][0] = Node(cast(ushort) root.c, Ratio(root.f), index[2]);
-    root.recurse!((ref DNode n)
+    void recurse(ref const DNode dn, ref Node n)
     {
-        //n = Node(cast(ushort) n.c, Ratio(n.f));
-        switch (n.child.length)
+        switch (dn.child.length)
         {
             case 0:
+                n = Node(cast(ushort) dn.c, Ratio(dn.f), 0);
                 break;
             case 1:
+                n = Node(cast(ushort) dn.c, Ratio(dn.f), index[0] + NodeIndexLimit.start1);
+                uint i = index[0];
                 ++index[0];
+                recurse(dn.child[0], ns[0][i]);
                 break;
             case 2:
+                n = Node(cast(ushort) dn.c, Ratio(dn.f), index[1] + NodeIndexLimit.start2);
+                uint i = index[1] * 2;
                 ++index[1];
+                recurse(dn.child[0], ns[1][i]);
+                recurse(dn.child[1], ns[1][i + 1]);
                 break;
             default:
+                n = Node(cast(ushort) dn.c, Ratio(dn.f), index[2] + NodeIndexLimit.startMult);
+                uint i = multIndex;
+                ns[2][index[2]] = multIndex;
                 ++index[2];
-                multIndex += n.child.length;
+                multIndex += dn.child.length;
+                foreach (ref e; dn.child)
+                    recurse(e, ns[3][i++]);
                 break;
         }
-    });
+    }
+    ++index[0];
+    recurse(root, ns[0][0]);
+    ns[2][$ - 1] = multIndex;
     return ns;
 }
+
+// TODO NodeStore traversal; unittests comparing to DNode tree
 
 void writeToFile(in ReturnType!compact nodes, string name)
 {
@@ -761,7 +776,7 @@ struct Ratio
 {
     import std.math : exp, log;
 
-    this(double val)
+    this(double val) pure nothrow
     in (val >= 0.0 && val <= 1.0)
     {
         if (val <= zeroStep)
@@ -777,7 +792,7 @@ struct Ratio
     }
     alias toDouble this;
 
-    void opAssign(double rhs)
+    void opAssign(double rhs) pure nothrow
     {
         this = Ratio(rhs);
     }
