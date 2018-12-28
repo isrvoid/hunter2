@@ -1,7 +1,7 @@
 import std.range;
 import std.algorithm;
 import std.meta : allSatisfy;
-import std.stdio : writeln;
+import std.stdio : writeln, File;
 import std.traits : ReturnType;
 import std.typecons : Tuple, tuple;
 
@@ -19,7 +19,8 @@ enum pwLists = [pwDir ~ "bt4-password.txt",
 void main()
 {
     // TODO getopt
-version (unittest) { } else
+version (unittest) { }
+else
 {
     DNode root = parseLists(pwLists);
     store(root, "/tmp/nodes");
@@ -231,7 +232,6 @@ version (unittest)
 
 void writeFile(in NodeStore ns, string name)
 {
-    import std.stdio : File;
     auto file = File(name, "wb");
     auto makeHeader()
     {
@@ -251,6 +251,30 @@ void writeFile(in NodeStore ns, string name)
         file.rawWrite(e);
 }
 
+NodeStore readFile(string name)
+{
+    auto file = File(name);
+    const h = file.rawRead(new StoreHeader[](1))[0];
+    if (h._version != StoreHeader.init._version)
+        throw new Exception("Version mismatch: " ~ name);
+
+    NodeStore ns;
+    ns[0].length = h.groupCount[0];
+    ns[1].length = h.groupCount[1] * 2;
+    ns[2].length = h.groupCount[2] + 1;
+    ns[3].length = (file.size - h.dataOffset - (cast(ubyte[]) ns[0]).length -
+        (cast(ubyte[]) ns[1]).length - (cast(ubyte[]) ns[2]).length) / Node.sizeof;
+
+    file.seek(h.dataOffset);
+    foreach (e; ns)
+        file.rawRead(e);
+
+    if (h.crc != getCrc(ns))
+        throw new Exception("CRC mismatch: " ~ name);
+
+    return ns;
+}
+
 ubyte[4] getCrc(in NodeStore ns)
 {
     import std.digest.crc : CRC32;
@@ -258,6 +282,47 @@ ubyte[4] getCrc(in NodeStore ns)
     foreach (e; ns)
         crc.put(cast(const ubyte[]) e);
     return crc.finish();
+}
+
+version (unittestLong)
+{
+    string readTestList()
+    {
+        import std.path : buildPath;
+        import std.zlib : UnCompress;
+        auto f = File(buildPath("test", "myspace.txt.gz"));
+        auto buf = new ubyte[](f.size);
+        f.rawRead(buf);
+        auto gz = new UnCompress();
+        return cast(string) gz.uncompress(buf);
+    }
+
+    @("full NodeStore stack") unittest
+    {
+        import std.path : buildPath;
+        import std.file : tempDir;
+        import std.string : lineSplitter;
+        import std.uni : byCodePoint;
+        auto list = readTestList();
+
+        ShovelNode shovel;
+        foreach (line; list.lineSplitter)
+        {
+            line.byCodePoint
+                .limitRepetitions!3
+                .take(32)
+                .array
+                .indexSlide!16(shovel);
+        }
+        auto root = shovel.to!DNode;
+        normalize(root);
+
+        const name = tempDir.buildPath("test_nodes");
+        writeFile(compact(root), name);
+
+        const ns = readFile(name);
+        assert(treesEqual(root, ns));
+    }
 }
 
 struct LimitRepetitions(R, size_t maxRep)
@@ -487,7 +552,6 @@ void indexSlide(size_t windowSize = 0, R)(R r, ref ShovelNode root) pure
 
 void indexListFile(string name, ref DNode root, size_t shovelSize = 25_000)
 {
-    import std.stdio : File;
     import std.encoding : sanitize;
     import std.string : strip;
     import std.uni : asLowerCase;
@@ -955,7 +1019,7 @@ struct StoreHeader
             ubyte number = 1;
             ubyte nodeSize = Node.sizeof;
         }
-        ulong ver;
+        ulong _version;
     }
     uint[3] groupCount;
     ubyte[4] crc;
