@@ -162,20 +162,17 @@ const(Node)[] child(ref const NodeStore ns, Node n) pure
     if (!n.child)
         return [];
 
-    switch (n.child >> 29 & 0b11)
+    if (n.child < NodeIndexLimit.end1)
+        return ns[0][n.child .. n.child + 1];
+
+    if (n.child < NodeIndexLimit.end2)
     {
-        case 3:
-            const i = n.child - NodeIndexLimit.startMult;
-            return ns[3][ns[2][i] .. ns[2][i + 1]];
-            break;
-        case 2:
-            const i = (n.child - NodeIndexLimit.start2) * 2;
-            return ns[1][i .. i + 2];
-            break;
-        default:
-            return ns[0][n.child .. n.child + 1];
-            break;
+        const i = (n.child - NodeIndexLimit.start2) * 2;
+        return ns[1][i .. i + 2];
     }
+
+    const i = n.child - NodeIndexLimit.startMult;
+    return ns[3][ns[2][i] .. ns[2][i + 1]];
 }
 
 version (unittest)
