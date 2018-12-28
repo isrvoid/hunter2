@@ -45,7 +45,7 @@ void store(DNode root, string name)
     writeln("Packing");
     const nodes = compact(root);
     writeln("Writing: '", name, "'");
-    writeToFile(nodes, name);
+    writeFile(nodes, name);
 }
 
 auto getStats(const DNode root)
@@ -229,19 +229,35 @@ version (unittest)
     assert(treesEqual(dn, compact(dn)));
 }
 
-void writeToFile(in ReturnType!compact nodes, string name)
+void writeFile(in NodeStore ns, string name)
 {
     import std.stdio : File;
     auto file = File(name, "wb");
-    StoreHeader header;
-    header.groupCount[0] = cast(uint) nodes[0].length;
-    header.groupCount[1] = cast(uint) nodes[1].length / 2;
-    header.groupCount[2] = cast(uint) nodes[2].length - 1;
-    file.rawWrite([header]);
+    auto makeHeader()
+    {
+        StoreHeader h;
+        h.groupCount[0] = cast(uint) ns[0].length;
+        h.groupCount[1] = cast(uint) ns[1].length / 2;
+        h.groupCount[2] = cast(uint) ns[2].length - 1;
+        h.crc = getCrc(ns);
+        h.dataOffset = 64;
+        return h;
+    }
+    const h = makeHeader();
+    file.rawWrite([h]);
 
-    file.seek(1 << header.dataOffsetLog2);
-    foreach (a; nodes)
-        file.rawWrite(a);
+    file.seek(h.dataOffset);
+    foreach (e; ns)
+        file.rawWrite(e);
+}
+
+ubyte[4] getCrc(in NodeStore ns)
+{
+    import std.digest.crc : CRC32;
+    CRC32 crc;
+    foreach (e; ns)
+        crc.put(cast(const ubyte[]) e);
+    return crc.finish();
 }
 
 struct LimitRepetitions(R, size_t maxRep)
@@ -938,11 +954,12 @@ struct StoreHeader
         {
             ubyte number = 1;
             ubyte nodeSize = Node.sizeof;
-            ubyte dataOffsetLog2 = 6;
         }
         ulong ver;
     }
     uint[3] groupCount;
+    ubyte[4] crc;
+    ushort dataOffset;
 }
 
 void recurse(alias pred, T : const DNode)(auto ref T node) pure
