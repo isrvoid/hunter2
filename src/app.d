@@ -48,12 +48,12 @@ void store(DNode root, string name)
     writeToFile(nodes, name);
 }
 
-auto getStats(DNode root)
+auto getStats(const DNode root)
 {
     size_t count1 = 1, count2, countMult, multNodeCount;
     dchar maxChar = 0;
 
-    root.recurse!((ref DNode n)
+    root.recurse!((ref const DNode n)
     {
         immutable length = n.child.length;
         if (length == 1)
@@ -104,7 +104,7 @@ auto checkCompactFit(ReturnType!getStats stats)
 
 alias NodeStore = Tuple!(Node[], Node[], uint[], Node[]);
 
-NodeStore compact(DNode root)
+NodeStore compact(const DNode root)
 {
     import std.conv : to;
     immutable stats = getStats(root);
@@ -157,7 +157,80 @@ NodeStore compact(DNode root)
     return ns;
 }
 
-// TODO NodeStore traversal; unittests comparing to DNode tree
+const(Node)[] child(ref const NodeStore ns, Node n) pure
+{
+    if (!n.child)
+        return [];
+
+    switch (n.child >> 29 & 0b11)
+    {
+        case 3:
+            const i = n.child - NodeIndexLimit.startMult;
+            return ns[3][ns[2][i] .. ns[2][i + 1]];
+            break;
+        case 2:
+            const i = (n.child - NodeIndexLimit.start2) * 2;
+            return ns[1][i .. i + 2];
+            break;
+        default:
+            return ns[0][n.child .. n.child + 1];
+            break;
+    }
+}
+
+version (unittest)
+{
+    bool treesEqual(const DNode root, const NodeStore ns)
+    {
+        bool res = true;
+        void recurse(ref const DNode dn, Node n)
+        {
+            auto nsChild = child(ns, n);
+            res &= dn.c == n.c && approxEqual(dn.f, n.f, ratioRelPrecision, 1e-7) && dn.child.length == nsChild.length;
+            foreach (i, ref e; dn.child)
+                recurse(e, nsChild[i]);
+        }
+        recurse(root, ns[0][0]);
+        return res;
+    }
+}
+
+@("compact empty root") unittest
+{
+    const dn = DNode('x', 0.123);
+    assert(treesEqual(dn, compact(dn)));
+}
+
+@("compact single char") unittest
+{
+    DNode dn;
+    dn.child = [DNode('a', 0.42)];
+    assert(treesEqual(dn, compact(dn)));
+}
+
+@("compact string") unittest
+{
+    ShovelNode sn;
+    "foobar".indexSlide(sn);
+    auto dn = sn.to!DNode;
+    normalize(dn);
+    assert(treesEqual(dn, compact(dn)));
+}
+
+@("compact lines") unittest
+{
+    auto lines = ["the", "quick", "brown", "fox", "jumps", "over", "lazy", "dog",
+         "the quick", "brown fox", "jumps over", "lazy dog",
+         "the quick brown", "fox jumps over", "the lazy dog",
+         "the quick brown fox", "jumps over the lazy dog",
+         "the quick brown fox jumps over the lazy dog"];
+    ShovelNode sn;
+    foreach (line; lines)
+        line.indexSlide(sn);
+    auto dn = sn.to!DNode;
+    normalize(dn);
+    assert(treesEqual(dn, compact(dn)));
+}
 
 void writeToFile(in ReturnType!compact nodes, string name)
 {
@@ -875,7 +948,7 @@ struct StoreHeader
     uint[3] groupCount;
 }
 
-void recurse(alias pred)(ref DNode node) pure
+void recurse(alias pred, T : const DNode)(auto ref T node) pure
     if (__traits(compiles, pred(node)))
 {
     import std.functional : unaryFun;
