@@ -552,16 +552,28 @@ void indexSlide(size_t windowSize = 0, R)(R r, ref ShovelNode root) pure
 
 void indexListFile(string name, ref DNode root, size_t shovelSize = 25_000)
 {
-    import std.encoding : sanitize;
+    import std.utf : UTFException;
     import std.string : strip;
     import std.uni : asLowerCase;
+    import std.utf : validate;
 
     ShovelNode shovel;
     size_t lineCount;
-    foreach (line; File(name).byLineCopy!dchar)
+    size_t invalidCount;
+    foreach (line; File(name).byLineCopy)
     {
-        line.sanitize
-            .strip
+        try
+            validate(line);
+        catch (UTFException e)
+        {
+            ++invalidCount;
+            continue;
+        }
+
+        if (line.any!"a > ushort.max") // DNode => Node requirement
+            continue;
+
+        line.strip
             .asLowerCase
             .limitRepetitions!3
             .take(28)
@@ -575,6 +587,9 @@ void indexListFile(string name, ref DNode root, size_t shovelSize = 25_000)
         }
     }
     merge(root, shovel.to!DNode);
+
+    if (invalidCount)
+        writeln("warning: invalid UTF-8 lines skipped: ", invalidCount);
 }
 
 struct DNode

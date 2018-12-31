@@ -10,9 +10,9 @@ endif
 BUILDDIR := bin
 SRC := src
 
-hunter2: $(BUILDDIR)/hunter2
+passwise: $(BUILDDIR)/passwise
 
-$(BUILDDIR)/hunter2: $(SRC)/app.d
+$(BUILDDIR)/passwise: $(SRC)/app.d
 	@dmd $(DFLAGS) $^ -of$@
 
 clean:
