@@ -8,11 +8,13 @@ else
 endif
 
 BUILDDIR := bin
-SRC := src
+SRCDIR := src
+SRCNAMES := util.d shovelnode.d dnode.d node.d app.d
+SRC := $(addprefix $(SRCDIR)/passwise/, $(SRCNAMES))
 
 passwise: $(BUILDDIR)/passwise
 
-$(BUILDDIR)/passwise: $(SRC)/app.d
+$(BUILDDIR)/passwise: $(SRC)
 	@dmd $(DFLAGS) $^ -of$@
 
 clean:
