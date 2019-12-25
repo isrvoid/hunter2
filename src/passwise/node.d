@@ -23,7 +23,7 @@ struct Ratio
             ratio = cast(ushort)(log(val) / f + 0.5);
     }
 
-    @property double toDouble()
+    double toDouble() const
     out (r; r >= 0.0 && r <= 1.0)
     {
         return ratio == ushort.max ? 0.0 : exp(ratio * f);

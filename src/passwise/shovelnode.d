@@ -92,14 +92,16 @@ void index(R)(auto ref R r, ref ShovelNode node) pure
     assert(1 == root['a']['c']['d'].count);
 }
 
-void indexSlide(size_t windowSize = 0, R)(R r, ref ShovelNode root) pure
+void indexSlide(size_t windowSize, size_t minWindowSize = windowSize, R)(R r, ref ShovelNode root) pure
 {
-    while (!r.empty)
+    static assert(minWindowSize && windowSize >= minWindowSize);
+    if (r.length <= minWindowSize)
+        return r.index(root);
+
+    const size_t sliceCount = r.length - minWindowSize + 1;
+    for (size_t i = 0; i < sliceCount; ++i)
     {
-        static if (windowSize > 0)
-            r.take(windowSize).index(root);
-        else
-            r.save.index(root);
+        r.take(windowSize).index(root);
         r.popFront();
     }
 }
@@ -107,14 +109,14 @@ void indexSlide(size_t windowSize = 0, R)(R r, ref ShovelNode root) pure
 @("indexSlide empty input") unittest
 {
     ShovelNode root;
-    "".indexSlide(root);
+    "".indexSlide!1(root);
     assert(root.empty);
 }
 
 @("indexSlide single char") unittest
 {
     ShovelNode root;
-    "a".indexSlide(root);
+    "a".indexSlide!1(root);
     assert(1 == root['a'].count);
     assert(root['a'].empty);
 }
@@ -122,28 +124,6 @@ void indexSlide(size_t windowSize = 0, R)(R r, ref ShovelNode root) pure
 @("indexSlide string") unittest
 {
     ShovelNode expect, root;
-    "aabc".index(expect);
-    "abc".index(expect);
-    "bc".index(expect);
-    "c".index(expect);
-
-    "aabc".indexSlide(root);
-    assert(expect == root);
-}
-
-@("indexSlide window") unittest
-{
-    ShovelNode expect, root;
-    "the".index(expect);
-    "he ".index(expect);
-    "e q".index(expect);
-    " qu".index(expect);
-    "qui".index(expect);
-    "uic".index(expect);
-    "ick".index(expect);
-    "ck ".index(expect);
-    "k b".index(expect);
-    " br".index(expect);
     "bro".index(expect);
     "row".index(expect);
     "own".index(expect);
@@ -151,10 +131,82 @@ void indexSlide(size_t windowSize = 0, R)(R r, ref ShovelNode root) pure
     "n f".index(expect);
     " fo".index(expect);
     "fox".index(expect);
-    "ox".index(expect);
-    "x".index(expect);
 
-    "the quick brown fox".indexSlide!3(root);
+    "brown fox".indexSlide!3(root);
+    assert(expect == root);
+}
+
+@("indexSlide window == input.length") unittest
+{
+    ShovelNode expect, root;
+    "foo".index(expect);
+
+    "foo".indexSlide!3(root);
+    assert(expect == root);
+}
+
+@("indexSlide window > input.length") unittest
+{
+    ShovelNode expect, root;
+    "foo".index(expect);
+
+    "foo".indexSlide!4(root);
+    assert(expect == root);
+}
+
+@("indexSlide min window") unittest
+{
+    ShovelNode expect, root;
+    "brown fox".index(expect);
+    "rown fox".index(expect);
+    "own fox".index(expect);
+
+    "brown fox".indexSlide!(size_t.max, 7)(root);
+    assert(expect == root);
+}
+
+@("indexSlide window with min") unittest
+{
+    ShovelNode expect, root;
+    "the quick brown ".index(expect);
+    "he quick brown f".index(expect);
+    "e quick brown fo".index(expect);
+    " quick brown fox".index(expect);
+    "quick brown fox".index(expect);
+    "uick brown fox".index(expect);
+    "ick brown fox".index(expect);
+    "ck brown fox".index(expect);
+
+    "the quick brown fox".indexSlide!(16, 12)(root);
+    assert(expect == root);
+}
+
+@("indexSlide window with min; window == input.length") unittest
+{
+    ShovelNode expect, root;
+    "brown fox".index(expect);
+    "rown fox".index(expect);
+    "own fox".index(expect);
+
+    "brown fox".indexSlide!(9, 7)(root);
+    assert(expect == root);
+}
+
+@("indexSlide window with min; min == input.length") unittest
+{
+    ShovelNode expect, root;
+    "brown fox".index(expect);
+
+    "brown fox".indexSlide!(size_t.max, 9)(root);
+    assert(expect == root);
+}
+
+@("indexSlide window with min; min > input.length") unittest
+{
+    ShovelNode expect, root;
+    "brown fox".index(expect);
+
+    "brown fox".indexSlide!(size_t.max, 10)(root);
     assert(expect == root);
 }
 

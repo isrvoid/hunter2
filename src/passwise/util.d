@@ -36,7 +36,7 @@ if (maxRep >= 1)
 
     @property bool empty() nothrow
     {
-        return _input.empty();
+        return _input.empty;
     }
 
 }
