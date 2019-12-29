@@ -44,7 +44,8 @@ in (a.c == b.c, "Merging nodes should have equal chars")
                 a.child[wi] = a.child[ai--];
                 a.child[wi].merge(b.child[bi--]);
                 break;
-            default: assert(0);
+            default:
+                assert(0);
         }
     }
 }
@@ -130,8 +131,8 @@ void normalize(ref DNode root) pure nothrow @safe
 {
     auto fun = function(ref DNode node)
     {
-        import std.algorithm : map, each, fold, max;
-        immutable fNorm = 1.0f / node.child.map!"a.f".fold!max(0.0f);
+        import std.algorithm : map, sum, each;
+        const fNorm = 1.0f / node.child.map!"a.f".sum;
         node.child.each!((ref a) { a.f *= fNorm; });
     };
     recurse!fun(root);
@@ -154,16 +155,16 @@ void normalize(ref DNode root) pure nothrow @safe
 
 @("normalize equal f") unittest
 {
-    auto expect = [DNode('a', 1), DNode('b', 1), DNode('c', 1)];
+    auto expect = [DNode('a', 0.5), DNode('b', 0.5)];
     auto root = DNode();
-    root.child = [DNode('a', 42), DNode('b', 42), DNode('c', 42)];
+    root.child = [DNode('a', 42), DNode('b', 42)];
     root.normalize;
     assert(expect == root.child);
 }
 
-@("normalize sets f to realative ratio") unittest
+@("normalize converts f to ratio") unittest
 {
-    auto expect = [DNode('a', 1), DNode('b', 0.5), DNode('c', 0.5)];
+    auto expect = [DNode('a', 0.5), DNode('b', 0.25), DNode('c', 0.25)];
     auto root = DNode();
     root.child = [DNode('a', 2), DNode('b', 1), DNode('c', 1)];
     root.normalize;
@@ -173,13 +174,13 @@ void normalize(ref DNode root) pure nothrow @safe
 @("normalize is recursive") unittest
 {
     auto expect = [
-        DNode('a', 0.75, [DNode('b', 1, [DNode('c', 0.5), DNode('d', 1)])]),
-        DNode('e', 1, [DNode('f', 1), DNode('g', 0.25)])
+        DNode('a', 0.375, [DNode('b', 1, [DNode('c', 0.125), DNode('d', 0.875)])]),
+        DNode('e', 0.625, [DNode('f', 0.75), DNode('g', 0.25)])
     ];
     auto root = DNode();
     root.child = [
-        DNode('a', 6, [DNode('b', 3, [DNode('c', 1), DNode('d', 2)])]),
-        DNode('e', 8, [DNode('f', 4), DNode('g', 1)])
+        DNode('a', 3, [DNode('b', 3, [DNode('c', 1), DNode('d', 7)])]),
+        DNode('e', 5, [DNode('f', 3), DNode('g', 1)])
     ];
     root.normalize;
     assert(expect == root.child);
