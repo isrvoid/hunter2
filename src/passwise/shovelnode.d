@@ -74,7 +74,7 @@ void index(R)(auto ref R r, ref ShovelNode node) pure
     assert(root['a']['b']['c'].empty);
 }
 
-@("branches do not merge") unittest
+@("index branches do not merge") unittest
 {
     ShovelNode root;
     "ac".index(root);
@@ -83,7 +83,7 @@ void index(R)(auto ref R r, ref ShovelNode node) pure
     assert(1 == root['b']['c'].count);
 }
 
-@("branches do not merge after separation") unittest
+@("index branches do not merge after separation") unittest
 {
     ShovelNode root;
     "abd".index(root);
@@ -92,16 +92,95 @@ void index(R)(auto ref R r, ref ShovelNode node) pure
     assert(1 == root['a']['c']['d'].count);
 }
 
-void slide(alias fun, size_t windowSize, size_t minWindowSize = windowSize, R)(R r, ref ShovelNode root) pure
+void indexDiff(R)(auto ref R r, ref ShovelNode node) pure
+{
+    void indexDiff(R)(auto ref R r, ref ShovelNode node, uint prev)
+    {
+        r.popFront();
+        if (r.empty)
+            return;
+
+        auto iNode = &node.require(r.front - prev);
+        ++iNode.count;
+        indexDiff(r, *iNode, r.front);
+    }
+
+    if (r.empty)
+        return;
+
+    indexDiff(r, node, r.front);
+}
+
+@("indexDiff empty input") unittest
+{
+    ShovelNode root;
+    "".indexDiff(root);
+    assert(root.empty);
+}
+
+@("indexDiff single char") unittest
+{
+    ShovelNode root;
+    "a".indexDiff(root);
+    assert(root.empty);
+}
+
+@("indexDiff string") unittest
+{
+    ShovelNode root;
+    "ab".indexDiff(root);
+    assert(1 == root[1].count);
+    assert(root[1].empty);
+}
+
+@("indexDiff negative diff") unittest
+{
+    ShovelNode root;
+    "ba".indexDiff(root);
+    assert(1 == root[-1].count);
+    assert(root[-1].empty);
+}
+
+@("indexDiff unequal diffs") unittest
+{
+    ShovelNode root;
+    "aa".indexDiff(root);
+    "ab".indexDiff(root);
+    assert(1 == root[0].count);
+    assert(root[0].empty);
+    assert(1 == root[1].count);
+    assert(root[1].empty);
+}
+
+@("indexDiff equal diffs merge") unittest
+{
+    ShovelNode root;
+    "ab".indexDiff(root);
+    "ab".indexDiff(root);
+    "cd".indexDiff(root);
+    assert(3 == root[1].count);
+    assert(root[1].empty);
+}
+
+@("indexDiff equal diffs from separate branches do not merge") unittest
+{
+    ShovelNode root;
+    "acd".indexDiff(root);
+    "bcd".indexDiff(root);
+    assert(1 == root[2][1].count);
+    assert(1 == root[1][1].count);
+}
+
+void slide(alias pred, size_t windowSize, size_t minWindowSize = windowSize, R)(R r, ref ShovelNode root) pure
 {
     static assert(minWindowSize && windowSize >= minWindowSize);
     if (r.length <= minWindowSize)
-        return fun(r, root);
+        return pred(r, root);
 
     const size_t sliceCount = r.length - minWindowSize + 1;
     for (size_t i = 0; i < sliceCount; ++i)
     {
-        fun(r.take(windowSize), root);
+        pred(r.take(windowSize), root);
         r.popFront();
     }
 }
