@@ -6,18 +6,18 @@ import passwise.shovelnode;
 
 struct DNode
 {
-    dchar c;
+    uint v;
     float f = 0.0f;
     DNode[] child;
 
     int opCmp(ref const DNode other) const pure nothrow @safe
     {
-        return (c > other.c) - (c < other.c);
+        return (v > other.v) - (v < other.v);
     }
 }
 
 void merge(ref DNode a, DNode b) pure nothrow @safe
-in (a.c == b.c, "Merging nodes should have equal chars")
+in (a.v == b.v, "Merging nodes should have equal values")
 {
     import passwise.util : mergeLength;
     a.f += b.f;
@@ -205,7 +205,7 @@ auto getStats(const DNode root)
             ++countMult;
             multNodeCount += length;
         }
-        maxChar = max(maxChar, n.c);
+        maxChar = max(maxChar, n.v);
     });
 
     return tuple!("count1", "count2", "countMult", "multNodeCount", "maxChar")
@@ -272,23 +272,23 @@ NodeStore compact(const DNode root)
         switch (dn.child.length)
         {
             case 0:
-                n = Node(cast(ushort) dn.c, Ratio(dn.f), 0);
+                n = Node(cast(ushort) dn.v, Ratio(dn.f), 0);
                 break;
             case 1:
-                n = Node(cast(ushort) dn.c, Ratio(dn.f), index[0] + NodeIndexLimit.start1);
+                n = Node(cast(ushort) dn.v, Ratio(dn.f), index[0] + NodeIndexLimit.start1);
                 uint i = index[0];
                 ++index[0];
                 recurse(dn.child[0], ns[0][i]);
                 break;
             case 2:
-                n = Node(cast(ushort) dn.c, Ratio(dn.f), index[1] + NodeIndexLimit.start2);
+                n = Node(cast(ushort) dn.v, Ratio(dn.f), index[1] + NodeIndexLimit.start2);
                 uint i = index[1] * 2;
                 ++index[1];
                 recurse(dn.child[0], ns[1][i]);
                 recurse(dn.child[1], ns[1][i + 1]);
                 break;
             default:
-                n = Node(cast(ushort) dn.c, Ratio(dn.f), index[2] + NodeIndexLimit.startMult);
+                n = Node(cast(ushort) dn.v, Ratio(dn.f), index[2] + NodeIndexLimit.startMult);
                 uint i = multIndex;
                 ns[2][index[2]] = multIndex;
                 ++index[2];
@@ -313,7 +313,7 @@ version (unittest)
         void recurse(ref const DNode dn, Node n)
         {
             auto nsChild = child(ns, n);
-            res &= dn.c == n.c && approxEqual(dn.f, n.f, ratioRelPrecision, 1e-7) && dn.child.length == nsChild.length;
+            res &= dn.v == n.v && approxEqual(dn.f, n.f, ratioRelPrecision, 1e-7) && dn.child.length == nsChild.length;
             foreach (i, ref e; dn.child)
                 recurse(e, nsChild[i]);
         }

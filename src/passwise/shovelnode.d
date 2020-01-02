@@ -5,7 +5,7 @@ import passwise.dnode : DNode;
 
 struct ShovelNode
 {
-    ShovelNode[dchar] node;
+    ShovelNode[uint] node;
     size_t count;
     alias node this;
 }
@@ -213,7 +213,7 @@ void indexSlide(size_t windowSize, size_t minWindowSize = windowSize, R)(R r, re
 DNode to(T : DNode)(in ShovelNode sn) pure nothrow @safe
 {
     import std.algorithm : sort;
-    static void recurse(in ShovelNode[dchar] sn, ref DNode[] node)
+    static void recurse(in ShovelNode[uint] sn, ref DNode[] node)
     {
         node.reserve(sn.length);
         foreach (kv; sn.byKeyValue)
