@@ -188,10 +188,8 @@ void normalize(ref DNode root) pure nothrow @safe
 
 auto getStats(const DNode root)
 {
-    import std.algorithm : max;
     import std.typecons : tuple;
     size_t count1 = 1, count2, countMult, multNodeCount;
-    dchar maxChar = 0;
 
     root.recurse!((ref const DNode n)
     {
@@ -205,11 +203,10 @@ auto getStats(const DNode root)
             ++countMult;
             multNodeCount += length;
         }
-        maxChar = max(maxChar, n.v);
     });
 
-    return tuple!("count1", "count2", "countMult", "multNodeCount", "maxChar")
-        (count1, count2, countMult, multNodeCount, maxChar);
+    return tuple!("count1", "count2", "countMult", "multNodeCount")
+        (count1, count2, countMult, multNodeCount);
 }
 
 auto checkCompactFit(ReturnType!getStats stats)
@@ -220,7 +217,6 @@ auto checkCompactFit(ReturnType!getStats stats)
         index1,
         index2,
         indexMult,
-        charCast,
         multNodeCount
     }
 
@@ -232,9 +228,6 @@ auto checkCompactFit(ReturnType!getStats stats)
 
     if (stats.countMult > NodeIndexLimit.endMult - NodeIndexLimit.startMult)
         return Result.indexMult;
-
-    if (stats.maxChar > ushort.max)
-        return Result.charCast;
 
     if (stats.multNodeCount > uint.max) // count+1 index marks end of last group
         return Result.multNodeCount;
