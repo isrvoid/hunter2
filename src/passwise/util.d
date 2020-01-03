@@ -4,6 +4,8 @@ import std.range;
 import std.algorithm : isSorted, equal;
 import std.meta : allSatisfy;
 
+@safe:
+
 struct LimitRepetitions(R, size_t maxRep)
 if (maxRep >= 1)
 {
@@ -74,7 +76,7 @@ if (isInputRange!Range)
     assert(equal("middllleee", "middlllllllllllllllllllllllllllllleee".limitRepetitions!3));
 }
 
-size_t mergeLength(alias cmp = "(a > b) - (a < b)", R1, R2)(R1 a, R2 b) pure @safe
+size_t mergeLength(alias cmp = "(a > b) - (a < b)", R1, R2)(R1 a, R2 b) pure
 if (allSatisfy!(isInputRange, R1, R2))
 in (a.isSorted && b.isSorted, "ranges should be sorted")
 {
@@ -164,4 +166,64 @@ in (a.isSorted && b.isSorted, "ranges should be sorted")
 @("mergeLength non strictly ordered input") unittest
 {
     assert(11 == mergeLength("abbceee", "aabbbdeeee"));
+}
+
+ushort[] frequencyIndex(in size_t[] count) pure
+in (count.length <= ushort.max + 1)
+{
+    import std.algorithm : makeIndex;
+    auto res = new ushort[](1 << 16);
+    foreach (i, ref v; res)
+        v = cast(ushort) i;
+
+    auto idx = new size_t[](count.length);
+    makeIndex!"a > b"(count, idx);
+    foreach (i, v; idx)
+        if (count[v])
+            res[v] = cast(ushort) i;
+
+    return res;
+}
+
+@("frequencyIndex returns LUT for any ushort") unittest
+{
+    assert(0x10000 == frequencyIndex(null).length);
+}
+
+@("frequencyIndex init") unittest
+{
+    const lut = frequencyIndex(null);
+    assert(0 == lut[0]);
+    assert('a' == lut['a']);
+    assert(ushort.max == lut[ushort.max]);
+}
+
+@("frequencyIndex count sets LUT value") unittest
+{
+    auto count = new size_t[]('a' + 1);
+    count['a'] = 1;
+    const lut = frequencyIndex(count);
+    assert(0 == lut['a']);
+}
+
+@("frequencyIndex count only affects corresponding indices") unittest
+{
+    auto count = new size_t[]('a' + 1);
+    count['a'] = 42;
+    auto expect = frequencyIndex(null);
+    expect['a'] = 0;
+    assert(expect == frequencyIndex(count));
+}
+
+@("frequencyIndex multiple counts") unittest
+{
+    auto count = new size_t[]('a' + 16);
+    count['a'] = 42;
+    count['e'] = 40;
+    count['b'] = 10;
+    auto expect = frequencyIndex(null);
+    expect['a'] = 0;
+    expect['e'] = 1;
+    expect['b'] = 2;
+    assert(expect == frequencyIndex(count));
 }
