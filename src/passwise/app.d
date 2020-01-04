@@ -11,77 +11,71 @@ enum pwDir = seclistsDir ~ "/Passwords/";
 enum pwLists = [pwDir ~ "bt4-password.txt",
              pwDir ~ "darkc0de.txt",
              pwDir ~ "openwall.net-all.txt",
+             pwDir ~ "xato-net-10-million-passwords.txt",
              pwDir ~ "Leaked-Databases/alleged-gmail-passwords.txt",
-             pwDir ~ "Leaked-Databases/md5decryptor.uk.txt",
+             pwDir ~ "Leaked-Databases/md5decryptor-uk.txt",
              //pwDir ~ "Leaked-Databases/rockyou.txt", // needs extracted rockyou.txt.tar.gz
 ];
 
 void main()
 {
     // TODO getopt
-version (unittest) { }
-else
-{
-    DNode root = parseLists(pwLists);
-    store(root, "/tmp/nodes");
-}
+    import passwise.store : store;
+    auto index = indexListFiles(pwLists);
+    store(index.node, "/tmp/nodes");
 }
 
-DNode parseLists(string[] names)
+auto indexListFiles(string[] names)
 {
+    import std.typecons : tuple;
     import std.path : baseName;
+    import passwise.util : frequencyIndex, frequencyIndexLength;
+    auto freq = new size_t[](frequencyIndexLength);
     DNode root;
     foreach (i, name; names)
     {
         writeln("Parsing list ", i + 1, "/", pwLists.length, ": '", name.baseName, "'");
-        indexListFile(name, root);
+        indexListFile(name, freq, root);
     }
 
     normalize(root);
-    return root;
+    return tuple!("freq", "node")(frequencyIndex(freq), root);
 }
 
-void store(DNode root, string name)
+void indexListFile(string name, size_t[] freq, ref DNode root, size_t shovelSize = 25_000)
 {
-    import passwise.node : writeFile;
-    writeln("Packing");
-    const nodes = compact(root);
-    writeln("Writing: '", name, "'");
-    writeFile(nodes, name);
-}
-
-void indexListFile(string name, ref DNode root, size_t shovelSize = 25_000)
-{
-    import std.algorithm : any;
+    import std.algorithm : filter, each;
     import std.array : array;
     import std.range : take;
     import std.stdio : File;
     import std.string : strip;
     import std.uni : asLowerCase;
-    import std.utf : validate, UTFException;
-    import passwise.util : limitRepetitions;
+    import std.encoding : isValid, codePoints;
+    import passwise.util : limitRepetitions, frequencyIndexLength;
     ShovelNode shovel;
     size_t lineCount;
     size_t invalidCount;
-    foreach (line; File(name).byLineCopy)
+    foreach (line; File(name).byLine)
     {
-        try
-            validate(line);
-        catch (UTFException e)
+        if (!isValid(line))
         {
             ++invalidCount;
             continue;
         }
 
-        if (line.any!"a > ushort.max") // DNode => Node requirement
-            continue;
-
-        line.strip
+        const normLine = codePoints(cast(immutable char[]) line)
+            .array
+            .strip
             .asLowerCase
             .limitRepetitions!3
             .take(28)
-            .array
-            .indexSlide!12(shovel);
+            .array;
+
+        normLine
+            .filter!(a => a < frequencyIndexLength)
+            .each!(a => ++freq[a]);
+
+        normLine.slide!(indexDiff, 12, 4)(shovel);
 
         if (++lineCount % shovelSize == 0)
         {
