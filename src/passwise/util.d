@@ -168,11 +168,13 @@ in (a.isSorted && b.isSorted, "ranges should be sorted")
     assert(11 == mergeLength("abbceee", "aabbbdeeee"));
 }
 
+enum size_t frequencyIndexLength = 0x800;
+
 ushort[] frequencyIndex(in size_t[] count) pure
-in (count.length <= ushort.max + 1)
+in (count.length <= frequencyIndexLength)
 {
     import std.algorithm : makeIndex;
-    auto res = new ushort[](1 << 16);
+    auto res = new ushort[](frequencyIndexLength);
     foreach (i, ref v; res)
         v = cast(ushort) i;
 
@@ -185,9 +187,9 @@ in (count.length <= ushort.max + 1)
     return res;
 }
 
-@("frequencyIndex returns LUT for any ushort") unittest
+@("frequencyIndex returns fixed length LUT") unittest
 {
-    assert(0x10000 == frequencyIndex(null).length);
+    assert(frequencyIndexLength == frequencyIndex(null).length);
 }
 
 @("frequencyIndex init") unittest
@@ -195,7 +197,7 @@ in (count.length <= ushort.max + 1)
     const lut = frequencyIndex(null);
     assert(0 == lut[0]);
     assert('a' == lut['a']);
-    assert(ushort.max == lut[ushort.max]);
+    assert(frequencyIndexLength - 1 == lut[frequencyIndexLength - 1]);
 }
 
 @("frequencyIndex count sets LUT value") unittest
