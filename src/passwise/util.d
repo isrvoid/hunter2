@@ -229,3 +229,24 @@ in (count.length <= frequencyIndexLength)
     expect['b'] = 2;
     assert(expect == frequencyIndex(count));
 }
+
+auto findListFiles(string path, in string[] exclude, size_t minSize = 0, size_t maxSize = size_t.max) @system
+{
+    import std.file : dirEntries, SpanMode;
+    import std.path : baseName;
+    import std.regex : regex, matchFirst;
+    auto rExclude = regex(exclude);
+    string[] res;
+    foreach (e; dirEntries(path, SpanMode.breadth))
+    {
+        if (e.isDir || e.size < minSize || e.size > maxSize)
+            continue;
+
+        if (matchFirst(e.name.baseName, rExclude))
+            continue;
+
+        res ~= e.name;
+    }
+
+    return res;
+}
