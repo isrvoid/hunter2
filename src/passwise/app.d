@@ -7,25 +7,18 @@ import passwise.dnode;
 
 enum seclistsDir = "/home/user/devel/SecLists"; // path to github.com/danielmiessler/SecLists
 
-enum pwDir = seclistsDir ~ "/Passwords/";
-enum pwLists = [pwDir ~ "bt4-password.txt",
-             pwDir ~ "darkc0de.txt",
-             pwDir ~ "openwall.net-all.txt",
-             pwDir ~ "xato-net-10-million-passwords.txt",
-             pwDir ~ "Leaked-Databases/alleged-gmail-passwords.txt",
-             pwDir ~ "Leaked-Databases/md5decryptor-uk.txt",
-             //pwDir ~ "Leaked-Databases/rockyou.txt", // needs extracted rockyou.txt.tar.gz
-];
-
 void main()
 {
     // TODO getopt
+    import passwise.util : findListFiles;
     import passwise.store : store;
-    auto index = indexListFiles(pwLists);
+    const exclude = [r".*\.csv", r".*\.md", r".*\.[t]?gz", ".*count.*"];
+    const listFiles = findListFiles(seclistsDir ~ "/Passwords", exclude, 10_000);
+    auto index = indexListFiles(listFiles);
     store(index.node, "/tmp/nodes");
 }
 
-auto indexListFiles(string[] names)
+auto indexListFiles(in string[] names)
 {
     import std.typecons : tuple;
     import std.path : baseName;
@@ -34,7 +27,7 @@ auto indexListFiles(string[] names)
     DNode root;
     foreach (i, name; names)
     {
-        writeln("Parsing list ", i + 1, "/", pwLists.length, ": '", name.baseName, "'");
+        writeln("Parsing list ", i + 1, "/", names.length, ": '", name.baseName, "'");
         indexListFile(name, freq, root);
     }
 
