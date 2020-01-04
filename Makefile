@@ -9,10 +9,13 @@ endif
 
 BUILDDIR := bin
 SRCDIR := src
-SRCNAMES := util.d shovelnode.d dnode.d node.d app.d
+SRCNAMES := util.d shovelnode.d dnode.d node.d store.d app.d
 SRC := $(addprefix $(SRCDIR)/passwise/, $(SRCNAMES))
 
 passwise: $(BUILDDIR)/passwise
+
+test: $(BUILDDIR)/passwise
+	@$? --DRT-testmode=test-only
 
 $(BUILDDIR)/passwise: $(SRC)
 	@dmd $(DFLAGS) $^ -of$@

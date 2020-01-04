@@ -374,6 +374,7 @@ version (unittestLong)
         import std.file : tempDir;
         import std.string : lineSplitter;
         import passwise.util : limitRepetitions;
+        import passwise.store;
         auto list = readTestList();
 
         ShovelNode shovel;
