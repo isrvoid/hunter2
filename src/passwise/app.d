@@ -1,9 +1,9 @@
 module passwise.app;
 
 import std.stdio : writeln;
-
 import passwise.shovelnode;
 import passwise.dnode;
+import passwise.store;
 
 enum seclistsDir = "/home/user/devel/SecLists"; // path to github.com/danielmiessler/SecLists
 
@@ -11,16 +11,17 @@ void main()
 {
     // TODO getopt
     import passwise.util : findListFiles;
-    import passwise.store : store;
+    // TODO extract function
     const exclude = [r".*\.csv", r".*\.md", r".*\.[t]?gz", ".*count.*"];
     const listFiles = findListFiles(seclistsDir ~ "/Passwords", exclude, 10_000);
     auto index = indexListFiles(listFiles);
-    store(index.node, "/tmp/nodes");
+    const fileName = "/tmp/nodes";
+    writeln("Writing: '", fileName, "'");
+    writeFile(index, fileName);
 }
 
 auto indexListFiles(in string[] names)
 {
-    import std.typecons : tuple;
     import std.path : baseName;
     import passwise.util : frequencyIndex, frequencyIndexLength;
     auto freq = new size_t[](frequencyIndexLength);
@@ -31,8 +32,9 @@ auto indexListFiles(in string[] names)
         indexListFile(name, freq, root);
     }
 
+    writeln("Packing");
     normalize(root);
-    return tuple!("freq", "node")(frequencyIndex(freq), root);
+    return Index(frequencyIndex(freq), compact(root));
 }
 
 void indexListFile(string name, size_t[] freq, ref DNode root, size_t shovelSize = 25_000)

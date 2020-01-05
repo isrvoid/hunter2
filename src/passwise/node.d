@@ -120,12 +120,3 @@ enum NodeIndexLimit : uint
 }
 
 alias NodeStore = Tuple!(Node[], Node[], uint[], Node[]);
-
-ubyte[4] getCrc(in NodeStore ns)
-{
-    import std.digest.crc : CRC32;
-    CRC32 crc;
-    foreach (e; ns)
-        crc.put(cast(const ubyte[]) e);
-    return crc.finish();
-}

@@ -373,7 +373,7 @@ version (unittestLong)
         import std.path : buildPath;
         import std.file : tempDir;
         import std.string : lineSplitter;
-        import passwise.util : limitRepetitions;
+        import passwise.util : limitRepetitions, frequencyIndex;
         import passwise.store;
         auto list = readTestList();
 
@@ -389,9 +389,11 @@ version (unittestLong)
         normalize(root);
 
         const name = tempDir.buildPath("test_nodes");
-        writeFile(compact(root), name);
+        const expect = Index(frequencyIndex(null), compact(root));
+        writeFile(expect, name);
 
-        const ns = readFile(name);
-        assert(treesEqual(root, ns));
+        const index = readFile(name);
+        assert(expect == index);
+        assert(treesEqual(root, index.nodes));
     }
 }
