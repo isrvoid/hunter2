@@ -5,19 +5,22 @@ import passwise.shovelnode;
 import passwise.dnode;
 import passwise.store;
 
-enum seclistsDir = "/home/user/devel/SecLists"; // path to github.com/danielmiessler/SecLists
-
 void main()
 {
     // TODO getopt
+    const pwListsDir = "/home/user/devel/SecLists/Passwords"; // github.com/danielmiessler/SecLists
+    const fileName = "/home/user/tmp/nodes";
+    generateIndexFile(pwListsDir, fileName);
+}
+
+void generateIndexFile(string listFilesSearchDir, string outputFileName)
+{
     import passwise.util : findListFiles;
-    // TODO extract function
     const exclude = [r".*\.csv", r".*\.md", r".*\.[t]?gz", ".*count.*"];
-    const listFiles = findListFiles(seclistsDir ~ "/Passwords", exclude, 10_000);
+    const listFiles = findListFiles(listFilesSearchDir, exclude, 10_000);
     auto index = indexListFiles(listFiles);
-    const fileName = "/tmp/nodes";
-    writeln("Writing: '", fileName, "'");
-    writeFile(index, fileName);
+    writeln("Writing: '", outputFileName, "'");
+    writeFile(index, outputFileName);
 }
 
 auto indexListFiles(in string[] names)
