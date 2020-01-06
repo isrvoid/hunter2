@@ -65,15 +65,14 @@ void indexListFile(string name, size_t[] freq, ref DNode root, size_t shovelSize
             .array
             .strip
             .asLowerCase
-            .limitRepetitions!3
-            .take(28)
+            .take(32)
             .array;
 
         normLine
             .filter!(a => a < frequencyIndexLength)
             .each!(a => ++freq[a]);
 
-        normLine.slide!(indexDiff, 12, 4)(shovel);
+        normLine.slide!(indexDiff, 12, 5)(shovel);
 
         if (++lineCount % shovelSize == 0)
         {
