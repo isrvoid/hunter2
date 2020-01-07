@@ -13,6 +13,40 @@ void main()
     generateIndexFile(pwListsDir, fileName);
 }
 
+void printProb(string s, ref in Index index)
+{
+    import std.algorithm : find;
+    import std.range : front, popFront, empty;
+    import std.stdio : write;
+    import passwise.node;
+
+    if (s.empty)
+        return;
+
+    const ns = index.nodes;
+    Node prev = ns[0][0];
+
+    dchar prevC = s.front;
+    s.popFront();
+    uint freq = prevC < index.freq.length ? index.freq[prevC] : prevC;
+    write(prevC, ":", freq, "; ");
+    foreach (c; s)
+    {
+        ushort diff = cast(ushort)(c - prevC);
+        prevC = c;
+        auto search = child(ns, prev).find!"a.v == b"(diff);
+        if (search.empty)
+        {
+            write(c, ":'not found'");
+            break;
+        }
+        prev = search.front;
+
+        write(c, ":", search.front.f.toDouble, "; ");
+    }
+    writeln();
+}
+
 void generateIndexFile(string listFilesSearchDir, string outputFileName)
 {
     import passwise.util : findListFiles;
