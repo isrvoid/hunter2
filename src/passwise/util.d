@@ -168,66 +168,62 @@ in (a.isSorted && b.isSorted, "ranges should be sorted")
     assert(11 == mergeLength("abbceee", "aabbbdeeee"));
 }
 
-enum size_t frequencyIndexLength = 0x800;
-
-ushort[] frequencyIndex(in size_t[] count) pure
-in (count.length <= frequencyIndexLength)
+struct Pair
 {
-    import std.algorithm : makeIndex;
-    auto res = new ushort[](frequencyIndexLength);
-    foreach (i, ref v; res)
-        v = cast(ushort) i;
-
-    auto idx = new size_t[](count.length);
-    makeIndex!"a > b"(count, idx);
-    foreach (i, v; idx)
-        if (count[v])
-            res[v] = cast(ushort) i;
-
-    return res;
+    align (2):
+    ushort c;
+    float f;
 }
 
-@("frequencyIndex returns fixed length LUT") unittest
+Pair[] frequency(in size_t[] count) pure
+in (count.length <= ushort.max + 1)
 {
-    assert(frequencyIndexLength == frequencyIndex(null).length);
+    import std.algorithm : filter, map, sum;
+    import std.range : enumerate;
+    import std.array : array;
+    const total = count.sum;
+    return count
+        .enumerate
+        .filter!"a.value"
+        .map!(a => Pair(cast(ushort) a.index, float(a.value) / total))
+        .array;
 }
 
-@("frequencyIndex init") unittest
+@("frequency init") unittest
 {
-    const lut = frequencyIndex(null);
-    assert(0 == lut[0]);
-    assert('a' == lut['a']);
-    assert(frequencyIndexLength - 1 == lut[frequencyIndexLength - 1]);
+    assert(frequency(null).empty);
 }
 
-@("frequencyIndex count sets LUT value") unittest
+@("frequency single count") unittest
 {
-    auto count = new size_t[]('a' + 1);
-    count['a'] = 1;
-    const lut = frequencyIndex(count);
-    assert(0 == lut['a']);
+    const a = frequency([1]);
+    assert(1 == a.length);
+    assert(0 == a[0].c);
+    assert(1.0f == a[0].f);
 }
 
-@("frequencyIndex count only affects corresponding indices") unittest
+@("frequency 0 counts are skipped") unittest
 {
-    auto count = new size_t[]('a' + 1);
-    count['a'] = 42;
-    auto expect = frequencyIndex(null);
-    expect['a'] = 0;
-    assert(expect == frequencyIndex(count));
+    assert(frequency([0]).empty);
+    const freq = frequency([0, 42, 0]);
+    assert(1 == freq.length);
+    assert(1 == freq[0].c);
+    assert(1.0f == freq[0].f);
 }
 
-@("frequencyIndex multiple counts") unittest
+@("frequency multiple counts") unittest
 {
-    auto count = new size_t[]('a' + 16);
-    count['a'] = 42;
-    count['e'] = 40;
-    count['b'] = 10;
-    auto expect = frequencyIndex(null);
-    expect['a'] = 0;
-    expect['e'] = 1;
-    expect['b'] = 2;
-    assert(expect == frequencyIndex(count));
+    auto count = new size_t[]('d' + 1);
+    count['a'] = 2;
+    count['b'] = 1;
+    count['d'] = 1;
+    const freq = count.frequency;
+    assert('a' == freq[0].c);
+    assert(0.5f == freq[0].f);
+    assert('b' == freq[1].c);
+    assert(0.25f == freq[1].f);
+    assert('d' == freq[2].c);
+    assert(0.25f == freq[2].f);
 }
 
 auto findListFiles(string path, in string[] exclude, size_t minSize = 0, size_t maxSize = size_t.max) @system

@@ -1,5 +1,6 @@
 module passwise.app;
 
+import std.traits : isSomeString;
 import std.stdio : writeln;
 import passwise.shovelnode;
 import passwise.dnode;
@@ -13,7 +14,8 @@ void main()
     generateIndexFile(pwListsDir, fileName);
 }
 
-void printProb(string s, ref in Index index)
+void printProb(R)(R s, ref in Index index)
+if (isSomeString!R)
 {
     import std.algorithm : find;
     import std.range : front, popFront, empty;
@@ -28,7 +30,7 @@ void printProb(string s, ref in Index index)
 
     dchar prevC = s.front;
     s.popFront();
-    uint freq = prevC < index.freq.length ? index.freq[prevC] : prevC;
+    float freq; // FIXME
     write(prevC, ":", freq, "; ");
     foreach (c; s)
     {
@@ -60,30 +62,30 @@ void generateIndexFile(string listFilesSearchDir, string outputFileName)
 auto indexListFiles(in string[] names)
 {
     import std.path : baseName;
-    import passwise.util : frequencyIndex, frequencyIndexLength;
-    auto freq = new size_t[](frequencyIndexLength);
+    import passwise.util : frequency;
+    auto count = new size_t[](ushort.max + 1);
     DNode root;
     foreach (i, name; names)
     {
         writeln("Parsing list ", i + 1, "/", names.length, ": '", name.baseName, "'");
-        indexListFile(name, freq, root);
+        indexListFile(name, count, root);
     }
 
     writeln("Packing");
     normalize(root);
-    return Index(frequencyIndex(freq), compact(root));
+    return Index(frequency(count), compact(root));
 }
 
-void indexListFile(string name, size_t[] freq, ref DNode root, size_t shovelSize = 25_000)
+void indexListFile(string name, size_t[] count, ref DNode root, size_t shovelSize = 25_000)
+in (count.length == ushort.max + 1)
 {
-    import std.algorithm : filter, each;
+    import std.algorithm : each;
     import std.array : array;
     import std.range : take;
     import std.stdio : File;
     import std.string : strip;
     import std.uni : asLowerCase;
     import std.encoding : isValid, codePoints;
-    import passwise.util : limitRepetitions, frequencyIndexLength;
     ShovelNode shovel;
     size_t lineCount;
     size_t invalidCount;
@@ -102,9 +104,7 @@ void indexListFile(string name, size_t[] freq, ref DNode root, size_t shovelSize
             .take(32)
             .array;
 
-        normLine
-            .filter!(a => a < frequencyIndexLength)
-            .each!(a => ++freq[a]);
+        normLine.each!(a => ++count[cast(ushort) a]);
 
         normLine.slide!(indexDiff, 12, 5)(shovel);
 

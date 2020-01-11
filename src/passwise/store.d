@@ -2,6 +2,7 @@ module passwise.store;
 
 import std.typecons : Tuple;
 import passwise.dnode : DNode, compact;
+import passwise.util : Pair;
 import passwise.node;
 
 @safe:
@@ -23,7 +24,7 @@ struct StoreHeader
     uint dataOffset;
 }
 
-alias Index = Tuple!(ushort[], "freq", NodeStore, "nodes");
+alias Index = Tuple!(Pair[], "freq", NodeStore, "nodes");
 
 private ubyte[4] crc32Of(in Index index) pure nothrow
 {
@@ -64,18 +65,17 @@ void writeFile(in Index index, string name)
 Index readFile(string name)
 {
     import std.stdio : File;
-    import passwise.util : frequencyIndexLength;
     auto file = File(name);
     const h = file.rawRead([StoreHeader()])[0];
     if (h._version != StoreHeader.init._version)
         throw new Exception("Version mismatch: " ~ name);
 
-    if (h.freqLength != frequencyIndexLength)
-        throw new Exception("Frequency index length mismatch");
+    if (h.freqLength > ushort.max + 1)
+        throw new Exception("Frequency list too long");
 
     file.seek(h.dataOffset);
     Index res;
-    res.freq = file.rawRead(new ushort[](h.freqLength));
+    res.freq = file.rawRead(new Pair[](h.freqLength));
 
     NodeStore ns;
     ns[0].length = h.groupCount[0];
@@ -83,7 +83,7 @@ Index readFile(string name)
     ns[2].length = h.groupCount[2] + 1;
     const nodesSizeWithoutLastArray = (cast(ubyte[]) ns[0]).length +
         (cast(ubyte[]) ns[1]).length + (cast(ubyte[]) ns[2]).length;
-    const nodesOffset = h.dataOffset + h.freqLength * ushort.sizeof;
+    const nodesOffset = h.dataOffset + res.freq[0].sizeof * h.freqLength;
     ns[3].length = (file.size - nodesOffset - nodesSizeWithoutLastArray) / Node.sizeof;
 
     foreach (e; ns)
