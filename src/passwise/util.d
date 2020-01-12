@@ -175,11 +175,10 @@ struct Pair
     float f;
 }
 
-Pair[] frequency(in size_t[] count) pure
+Pair[] frequency(in size_t[] count) pure nothrow
 in (count.length <= ushort.max + 1)
 {
     import std.algorithm : filter, map, sum;
-    import std.range : enumerate;
     import std.array : array;
     const total = count.sum;
     return count
@@ -224,6 +223,69 @@ in (count.length <= ushort.max + 1)
     assert(0.25f == freq[1].f);
     assert('d' == freq[2].c);
     assert(0.25f == freq[2].f);
+}
+
+float frequency(ushort c, in Pair[] freq) pure nothrow
+{
+    const min = frequencyMin(c);
+    auto lower = freq.assumeSorted!"a.c < b.c".lowerBound!(SearchPolicy.gallop)(Pair(c));
+    if (lower.length < freq.length && freq[lower.length].c == c)
+        if (freq[lower.length].f > min)
+            return freq[lower.length].f;
+
+    return min;
+}
+
+@("frequency returns min if char is not found") unittest
+{
+    assert(frequencyMin('a') == frequency('a', null));
+}
+
+@("frequency single pair") unittest
+{
+    assert(0.5 == frequency('a', [Pair('a', 0.5)]));
+}
+
+@("frequency is capped at min") unittest
+{
+    const min = frequencyMin('a');
+    assert(min == frequency('a', [Pair('a', min * 0.99f)]));
+}
+
+@("frequency multiple pairs") unittest
+{
+    const freq = [Pair('b', 0.25), Pair('d', 0.5), Pair('e', 0.125)];
+    assert(frequencyMin('a') == frequency('a', freq));
+    assert(0.25 == frequency('b', freq));
+    assert(frequencyMin('c') == frequency('c', freq));
+    assert(0.5 == frequency('d', freq));
+    assert(0.125 == frequency('e', freq));
+    assert(frequencyMin('f') == frequency('f', freq));
+}
+
+enum frequencyMinCap = 1.0f / 1024;
+
+float frequencyMin(ushort c) pure nothrow
+{
+    import std.algorithm : min;
+    c += !c;
+    const res = 0.5f / c;
+    return min(res, frequencyMinCap);
+}
+
+@("frequencyMin small input is capped") unittest
+{
+    assert(frequencyMinCap == frequencyMin('A'));
+}
+
+@("frequencyMin 0 input") unittest
+{
+    assert(frequencyMinCap == frequencyMin(0));
+}
+
+@("frequencyMin larger input") unittest
+{
+    assert(frequencyMin(1 << 15) < frequencyMinCap);
 }
 
 auto findListFiles(string path, in string[] exclude, size_t minSize = 0, size_t maxSize = size_t.max) @system

@@ -21,6 +21,7 @@ if (isSomeString!R)
     import std.range : front, popFront, empty;
     import std.stdio : write;
     import passwise.node;
+    import passwise.util : frequency;
 
     if (s.empty)
         return;
@@ -28,10 +29,10 @@ if (isSomeString!R)
     const ns = index.nodes;
     Node prev = ns[0][0];
 
+    const freq = frequency(cast(ushort) s.front, index.freq);
+    write(s.front, ":", freq, "; ");
     dchar prevC = s.front;
     s.popFront();
-    float freq; // FIXME
-    write(prevC, ":", freq, "; ");
     foreach (c; s)
     {
         ushort diff = cast(ushort)(c - prevC);
