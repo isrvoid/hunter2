@@ -1,7 +1,7 @@
 module passwise.util;
 
 import std.range;
-import std.algorithm : isSorted, equal;
+import std.algorithm : isSorted, equal, min;
 import std.meta : allSatisfy;
 
 @safe:
@@ -267,9 +267,8 @@ enum frequencyMinCap = 1.0f / 1024;
 
 float frequencyMin(ushort c) pure nothrow
 {
-    import std.algorithm : min;
     c += !c;
-    const res = 0.5f / c;
+    const res = 0.25f / c;
     return min(res, frequencyMinCap);
 }
 
@@ -286,6 +285,33 @@ float frequencyMin(ushort c) pure nothrow
 @("frequencyMin larger input") unittest
 {
     assert(frequencyMin(1 << 15) < frequencyMinCap);
+}
+
+enum probMinCap = 1.0f / 16;
+
+float probMin(short diff) pure nothrow
+{
+    import std.math : abs;
+    diff += !diff;
+    diff = abs(diff);
+    const res = 0.25f / diff;
+    return min(res, probMinCap);
+}
+
+@("probMin small input is capped") unittest
+{
+    assert(probMinCap == probMin(1));
+    assert(probMinCap == probMin(-2));
+}
+
+@("probMin 0 input") unittest
+{
+    assert(probMinCap == probMin(0));
+}
+
+@("probMin larger input") unittest
+{
+    assert(probMin(-(1 << 14) < probMinCap));
 }
 
 auto findListFiles(string path, in string[] exclude, size_t minSize = 0, size_t maxSize = size_t.max) @system

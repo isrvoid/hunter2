@@ -17,11 +17,12 @@ void main()
 void printProb(R)(R s, ref in Index index)
 if (isSomeString!R)
 {
-    import std.algorithm : find;
+    import std.algorithm : find, max;
+    import std.math : log2, round;
     import std.range : front, popFront, empty;
     import std.stdio : write;
     import passwise.node;
-    import passwise.util : frequency;
+    import passwise.util : frequency, probMin;
 
     if (s.empty)
         return;
@@ -30,24 +31,29 @@ if (isSomeString!R)
     Node prev = ns[0][0];
 
     const freq = frequency(cast(ushort) s.front, index.freq);
+    double prob = freq;
     write(s.front, ":", freq, "; ");
     dchar prevC = s.front;
     s.popFront();
     foreach (c; s)
     {
-        ushort diff = cast(ushort)(c - prevC);
+        const diff = cast(ushort)(c - prevC);
         prevC = c;
         auto search = child(ns, prev).find!"a.v == b"(diff);
         if (search.empty)
         {
+            prob *= probMin(cast(ushort) c);
             write(c, ":'not found'");
             break;
         }
         prev = search.front;
 
-        write(c, ":", search.front.f.toDouble, "; ");
+        const f = max(probMin(diff), search.front.f.toDouble);
+        prob *= f;
+        write(c, ":", f, "; ");
     }
     writeln();
+    writeln("bits: ", log2(1.0 / prob).round);
 }
 
 void generateIndexFile(string listFilesSearchDir, string outputFileName)
