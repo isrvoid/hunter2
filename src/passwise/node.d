@@ -2,6 +2,8 @@ module passwise.node;
 
 import std.typecons : Tuple;
 
+@safe:
+
 static assert(Node.sizeof == 8);
 struct Node
 {
@@ -23,7 +25,7 @@ struct Ratio
             ratio = cast(ushort)(log(val) / f + 0.5);
     }
 
-    double toDouble() const
+    double toDouble() const pure nothrow
     out (r; r >= 0.0 && r <= 1.0)
     {
         return ratio == ushort.max ? 0.0 : exp(ratio * f);
@@ -91,7 +93,7 @@ version (unittest)
         assert(approxEqual(v, Ratio(v), ratioRelPrecision, 1e-7));
 }
 
-const(Node)[] child(ref const NodeStore ns, Node n) pure
+const(Node)[] child(ref const NodeStore ns, Node n) pure nothrow
 {
     if (!n.child)
         return [];
