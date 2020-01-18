@@ -1,7 +1,7 @@
 module passwise.util;
 
+import std.algorithm;
 import std.range;
-import std.algorithm : isSorted, equal, min;
 import std.meta : allSatisfy;
 
 @safe:
@@ -154,7 +154,6 @@ in (a.isSorted && b.isSorted, "ranges should be sorted")
 
 @("mergeLength longer input") unittest
 {
-    import std.algorithm : sort, uniq, merge;
     auto a = "why didn't we use std.algorithm : merge, uniq and walkLength to do the same?"d.dup;
     auto b = "mergeLength needs to be fast for the optimization to make sense"d.dup;
     a = a.sort.uniq.array;
@@ -178,7 +177,6 @@ struct Pair
 Pair[] frequency(in size_t[] count) pure nothrow
 in (count.length <= ushort.max + 1)
 {
-    import std.algorithm : filter, map, sum;
     import std.array : array;
     const total = count.sum;
     return count
@@ -287,31 +285,30 @@ float frequencyMin(ushort c) pure nothrow
     assert(frequencyMin(1 << 15) < frequencyMinCap);
 }
 
-enum probMinCap = 1.0f / 16;
-
-float probMin(short diff) pure nothrow
+float maxRandomProb(int diff) pure nothrow
 {
+    // f(w) = 1/w - d/w^2
+    // f(w') = -1/w^2 - -2d/w^3
+    // 2d/w0^3 - 1/w0^2 = 0
+    // w0 = 2d
+    // wmax = 1/2d - d/(2d)^2 = 1/2d - 1/4d = 1/4d
     import std.math : abs;
-    diff += !diff;
-    diff = abs(diff);
-    const res = 0.25f / diff;
-    return min(res, probMinCap);
+    return diff ? 0.25 / abs(diff) : 1.0f;
 }
 
-@("probMin small input is capped") unittest
+@("maxRandomProb 0") unittest
 {
-    assert(probMinCap == probMin(1));
-    assert(probMinCap == probMin(-2));
+    assert(maxRandomProb(0) <= 1.0f);
 }
 
-@("probMin 0 input") unittest
+@("maxRandomProb small") unittest
 {
-    assert(probMinCap == probMin(0));
+    assert(maxRandomProb(1) > maxRandomProb(2));
 }
 
-@("probMin larger input") unittest
+@("maxRandomProb signed") unittest
 {
-    assert(probMin(-(1 << 14) < probMinCap));
+    assert(maxRandomProb(1) == maxRandomProb(-1));
 }
 
 auto findListFiles(string path, in string[] exclude, size_t minSize = 0, size_t maxSize = size_t.max) @system

@@ -17,6 +17,7 @@ float[] prob(dstring s, ref in Index index) pure
     auto slide = new float[][](s.length);
     slide.each!((ref a) => a.reserve(15));
 
+    // TODO add random prob; require tail
     for (size_t i; s.length; ++i, s = s[1 .. $])
         foreach (j, e; singleWalkProb(s, index))
             slide[i + j] ~= e;
@@ -24,12 +25,11 @@ float[] prob(dstring s, ref in Index index) pure
     return slide.map!(fold!max).array;
 }
 
-// TODO move min capping into prob() (single pass)
 float[] singleWalkProb(dstring s, ref in Index index) pure nothrow
 {
     import std.range : assumeSorted;
     import passwise.node;
-    import passwise.util : frequency, probMin;
+    import passwise.util : frequency;
 
     float[] res;
     if (!s.length)
@@ -47,12 +47,10 @@ float[] singleWalkProb(dstring s, ref in Index index) pure nothrow
         const curr = child(index.nodes, prevNode);
         auto lower = curr.assumeSorted!"a.v < b.v".lowerBound(Node(delta));
         if (lower.length == curr.length || curr[lower.length].v != delta)
-        {
-            res ~= probMin(delta);
             break;
-        }
+
         prevNode = curr[lower.length];
-        res ~= max(probMin(delta), curr[lower.length].f.toDouble);
+        res ~= curr[lower.length].f.toDouble;
     }
     return res;
 }
