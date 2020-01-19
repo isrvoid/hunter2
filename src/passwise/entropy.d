@@ -17,20 +17,42 @@ float[] prob(dstring s, ref in Index index) pure
     auto slide = new float[][](s.length);
     slide.each!((ref a) => a.reserve(15));
 
-    // TODO add random prob; require tail
+    {
+        const rand = maxRandomProb(s);
+        size_t i;
+        slide.each!((ref a) => a ~= rand[i++]);
+    }
+
+    // TODO require tail
     for (size_t i; s.length; ++i, s = s[1 .. $])
-        foreach (j, e; singleWalkProb(s, index))
+        foreach (j, e; singleTravProb(s, index))
             slide[i + j] ~= e;
 
     return slide.map!(fold!max).array;
 }
 
-float[] singleWalkProb(dstring s, ref in Index index) pure nothrow
+private float[] maxRandomProb(dstring s) pure nothrow
+{
+    import std.array : array;
+    import std.range : zip, chain, only;
+    import passwise.util : maxRandomProb, maxRandomFreq;
+    if (!s.length)
+        return null;
+
+    auto freq = s.map!maxRandomFreq;
+    uint prev = s[0];
+    auto diff = s[1 .. $].map!((a) { const diff = a - prev; prev = a; return maxRandomProb(diff); });
+    auto pair = zip(freq, chain(0.0f.only, diff));
+    return pair.map!"max(a[0], a[1])".array;
+}
+
+// TODO test
+
+private float[] singleTravProb(dstring s, ref in Index index) pure nothrow
 {
     import std.range : assumeSorted;
     import passwise.node;
     import passwise.util : frequency;
-
     float[] res;
     if (!s.length)
         return res;
