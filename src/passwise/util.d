@@ -253,28 +253,19 @@ float frequency(ushort c, in Pair[] freq) pure nothrow
     assert(0.0f == frequency('f', freq));
 }
 
-enum frequencyMinCap = 1.0f / 1024;
-
-float frequencyMin(ushort c) pure nothrow
+float maxRandomFreq(uint v) pure nothrow
 {
-    c += !c;
-    const res = 0.25f / c;
-    return min(res, frequencyMinCap);
-}
-
-@("frequencyMin small input is capped") unittest
-{
-    assert(frequencyMinCap == frequencyMin('A'));
+    return 0.5f / (v + 1);
 }
 
 @("frequencyMin 0 input") unittest
 {
-    assert(frequencyMinCap == frequencyMin(0));
+    assert(maxRandomFreq(0) <= 1.0f);
 }
 
 @("frequencyMin larger input") unittest
 {
-    assert(frequencyMin(1 << 15) < frequencyMinCap);
+    assert(maxRandomFreq(1 << 15) > 0.0f);
 }
 
 float maxRandomProb(int diff) pure nothrow
