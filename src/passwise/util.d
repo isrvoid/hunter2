@@ -225,18 +225,16 @@ in (count.length <= ushort.max + 1)
 
 float frequency(ushort c, in Pair[] freq) pure nothrow
 {
-    const min = frequencyMin(c);
     auto lower = freq.assumeSorted!"a.c < b.c".lowerBound!(SearchPolicy.gallop)(Pair(c));
     if (lower.length < freq.length && freq[lower.length].c == c)
-        if (freq[lower.length].f > min)
-            return freq[lower.length].f;
+        return freq[lower.length].f;
 
-    return min;
+    return 0.0f;
 }
 
-@("frequency returns min if char is not found") unittest
+@("frequency returns 0 if char is not found") unittest
 {
-    assert(frequencyMin('a') == frequency('a', null));
+    assert(0.0f == frequency('a', null));
 }
 
 @("frequency single pair") unittest
@@ -244,21 +242,15 @@ float frequency(ushort c, in Pair[] freq) pure nothrow
     assert(0.5 == frequency('a', [Pair('a', 0.5)]));
 }
 
-@("frequency is capped at min") unittest
-{
-    const min = frequencyMin('a');
-    assert(min == frequency('a', [Pair('a', min * 0.99f)]));
-}
-
 @("frequency multiple pairs") unittest
 {
     const freq = [Pair('b', 0.25), Pair('d', 0.5), Pair('e', 0.125)];
-    assert(frequencyMin('a') == frequency('a', freq));
+    assert(0.0f == frequency('a', freq));
     assert(0.25 == frequency('b', freq));
-    assert(frequencyMin('c') == frequency('c', freq));
+    assert(0.0f == frequency('c', freq));
     assert(0.5 == frequency('d', freq));
     assert(0.125 == frequency('e', freq));
-    assert(frequencyMin('f') == frequency('f', freq));
+    assert(0.0f == frequency('f', freq));
 }
 
 enum frequencyMinCap = 1.0f / 1024;
