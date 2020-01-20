@@ -23,9 +23,8 @@ float[] prob(dstring s, ref in Index index) pure
         slide.each!((ref a) => a ~= rand[i++]);
     }
 
-    // TODO require tail
     for (size_t i; s.length; ++i, s = s[1 .. $])
-        foreach (j, e; singleTravProb(s, index))
+        foreach (j, e; singleTravProb(s, index).dropLikelyRandomTailHit)
             slide[i + j] ~= e;
 
     return slide.map!(fold!max).array;
@@ -45,8 +44,6 @@ private float[] maxRandomProb(dstring s) pure nothrow
     auto pair = zip(freq, chain(0.0f.only, diff));
     return pair.map!"max(a[0], a[1])".array;
 }
-
-// TODO test
 
 private float[] singleTravProb(dstring s, ref in Index index) pure nothrow
 {
@@ -75,4 +72,14 @@ private float[] singleTravProb(dstring s, ref in Index index) pure nothrow
         res ~= curr[lower.length].f.toDouble;
     }
     return res;
+}
+
+private float[] dropLikelyRandomTailHit(float[] prob) pure nothrow
+in (prob.length)
+{
+    const tail = prob[$ - 1];
+    if (tail > 0.618 && (prob.length <= 5 || prob[$ - 3] + prob[$ - 2] < tail * 1.236))
+        return prob[0 .. $ - 1];
+
+    return prob;
 }
