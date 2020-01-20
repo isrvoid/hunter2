@@ -51,6 +51,7 @@ in (count.length == ushort.max + 1)
     import std.string : strip;
     import std.uni : asLowerCase;
     import std.encoding : isValid, codePoints;
+    import passwise.util : limitRepetitions;
     ShovelNode shovel;
     size_t lineCount;
     size_t invalidCount;
@@ -66,12 +67,13 @@ in (count.length == ushort.max + 1)
             .array
             .strip
             .asLowerCase
+            .limitRepetitions!3
             .take(32)
             .array;
 
         normLine.each!(a => ++count[cast(ushort) a]);
 
-        normLine.slide!(indexDiff, 12, 5)(shovel);
+        normLine.slide!(indexDiff, 10, 5)(shovel);
 
         if (++lineCount % shovelSize == 0)
         {
