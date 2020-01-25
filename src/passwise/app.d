@@ -74,7 +74,7 @@ in (count.length == ushort.max + 1)
 
         normLine.each!(a => ++count[cast(ushort) a]);
 
-        normLine.slide!(indexDiff, 10, 5)(shovel);
+        indexDiff(normLine, shovel);
 
         if (++lineCount % shovelSize == 0)
         {

@@ -331,7 +331,7 @@ version (unittest)
 @("compact string") unittest
 {
     ShovelNode sn;
-    "foobar".slide!(index, size_t.max, 1)(sn);
+    "the quick brown fox".index(sn);
     auto dn = sn.to!DNode;
     normalize(dn);
     assert(treesEqual(dn, compact(dn)));
@@ -346,7 +346,7 @@ version (unittest)
          "the quick brown fox jumps over the lazy dog"];
     ShovelNode sn;
     foreach (line; lines)
-        line.slide!(index, size_t.max, 1)(sn);
+        line.index(sn);
     auto dn = sn.to!DNode;
     normalize(dn);
     assert(treesEqual(dn, compact(dn)));
@@ -383,7 +383,7 @@ version (unittestLong)
             line.limitRepetitions!3
                 .take(32)
                 .array
-                .slide!(index, 16)(shovel);
+                .index(shovel);
         }
         auto root = shovel.to!DNode;
         normalize(root);
