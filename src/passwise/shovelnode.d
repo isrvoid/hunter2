@@ -5,7 +5,7 @@ import passwise.dnode : DNode;
 
 struct ShovelNode
 {
-    ShovelNode[uint] node;
+    ShovelNode[int] node;
     size_t count;
     alias node this;
 }
@@ -174,7 +174,7 @@ void indexDiff(R)(R r, ref ShovelNode node) pure
 DNode to(T : DNode)(in ShovelNode sn) pure nothrow @safe
 {
     import std.algorithm : sort;
-    static void recurse(in ShovelNode[uint] sn, ref DNode[] node)
+    static void recurse(in ShovelNode[int] sn, ref DNode[] node)
     {
         node.reserve(sn.length);
         foreach (kv; sn.byKeyValue)

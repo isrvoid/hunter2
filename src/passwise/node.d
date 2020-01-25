@@ -7,7 +7,7 @@ import std.typecons : Tuple;
 static assert(Node.sizeof == 8);
 struct Node
 {
-    ushort v;
+    short v;
     Ratio f;
     uint child;
 }

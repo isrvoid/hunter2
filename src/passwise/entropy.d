@@ -57,11 +57,11 @@ private float[] singleTravProb(dstring s, ref in Index index) pure nothrow
     res.reserve(15);
     res ~= frequency(cast(ushort) s[0], index.freq);
     Node prevNode = index.nodes[0][0];
-    dchar prevC = s[0];
+    int prevC = s[0];
     s = s[1 .. $];
     foreach (c; s)
     {
-        const delta = cast(ushort)(c - prevC);
+        const delta = cast(short)(c - prevC);
         prevC = c;
         const curr = child(index.nodes, prevNode);
         auto lower = curr.assumeSorted!"a.v < b.v".lowerBound(Node(delta));

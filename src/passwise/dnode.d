@@ -6,7 +6,7 @@ import passwise.shovelnode;
 
 struct DNode
 {
-    uint v;
+    int v;
     float f = 0.0f;
     DNode[] child;
 
@@ -265,23 +265,23 @@ NodeStore compact(const DNode root)
         switch (dn.child.length)
         {
             case 0:
-                n = Node(cast(ushort) dn.v, Ratio(dn.f), 0);
+                n = Node(cast(short) dn.v, Ratio(dn.f), 0);
                 break;
             case 1:
-                n = Node(cast(ushort) dn.v, Ratio(dn.f), index[0] + NodeIndexLimit.start1);
+                n = Node(cast(short) dn.v, Ratio(dn.f), index[0] + NodeIndexLimit.start1);
                 uint i = index[0];
                 ++index[0];
                 recurse(dn.child[0], ns[0][i]);
                 break;
             case 2:
-                n = Node(cast(ushort) dn.v, Ratio(dn.f), index[1] + NodeIndexLimit.start2);
+                n = Node(cast(short) dn.v, Ratio(dn.f), index[1] + NodeIndexLimit.start2);
                 uint i = index[1] * 2;
                 ++index[1];
                 recurse(dn.child[0], ns[1][i]);
                 recurse(dn.child[1], ns[1][i + 1]);
                 break;
             default:
-                n = Node(cast(ushort) dn.v, Ratio(dn.f), index[2] + NodeIndexLimit.startMult);
+                n = Node(cast(short) dn.v, Ratio(dn.f), index[2] + NodeIndexLimit.startMult);
                 uint i = multIndex;
                 ns[2][index[2]] = multIndex;
                 ++index[2];
@@ -331,7 +331,7 @@ version (unittest)
 @("compact string") unittest
 {
     ShovelNode sn;
-    "the quick brown fox".index(sn);
+    "the quick brown fox".indexDiff(sn);
     auto dn = sn.to!DNode;
     normalize(dn);
     assert(treesEqual(dn, compact(dn)));
@@ -346,7 +346,7 @@ version (unittest)
          "the quick brown fox jumps over the lazy dog"];
     ShovelNode sn;
     foreach (line; lines)
-        line.index(sn);
+        line.indexDiff(sn);
     auto dn = sn.to!DNode;
     normalize(dn);
     assert(treesEqual(dn, compact(dn)));
@@ -383,7 +383,7 @@ version (unittestLong)
             line.limitRepetitions!3
                 .take(32)
                 .array
-                .index(shovel);
+                .indexDiff(shovel);
         }
         auto root = shovel.to!DNode;
         normalize(root);
