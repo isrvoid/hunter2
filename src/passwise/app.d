@@ -15,49 +15,6 @@ void main()
     generateIndexFile(pwListsDir, fileName);
 }
 
-size_t[] radix16Bits(ref in Index index, size_t n)
-{
-    import std.random : Random, uniform, unpredictableSeed;
-    import std.algorithm : each, sort;
-    auto rnd = Random(unpredictableSeed);
-    auto makeString()
-    {
-        enum lut = "0123456789ABCDEF"d;
-        // 256 / log2(16) = 64
-        dchar[64] a;
-        a.each!((ref a) => a = lut[uniform(0, 16)]);
-        return a.idup;
-    }
-
-    auto res = new size_t[](n);
-    foreach (ref e; res)
-        e = makeString.prob(index).bits;
-
-    res.sort;
-    return res;
-}
-
-size_t[] radix64Bits(ref in Index index, size_t n)
-{
-    import std.random : Random, uniform, unpredictableSeed;
-    import std.algorithm : each, sort;
-    auto rnd = Random(unpredictableSeed);
-    auto makeString()
-    {
-        // 256 / log2(64) ~ 43
-        dchar[43] a;
-        a.each!((ref a) => a = ' ' + uniform(0, 64));
-        return a.idup;
-    }
-
-    auto res = new size_t[](n);
-    foreach (ref e; res)
-        e = makeString.prob(index).bits;
-
-    res.sort;
-    return res;
-}
-
 void generateIndexFile(string listFilesSearchDir, string outputFileName)
 {
     import passwise.util : findListFiles;

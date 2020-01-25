@@ -92,7 +92,7 @@ void index(R)(auto ref R r, ref ShovelNode node) pure
     assert(1 == root['a']['c']['d'].count);
 }
 
-void indexDiff(R)(auto ref R r, ref ShovelNode node) pure
+void indexDiff(R)(R r, ref ShovelNode node) pure
 {
     void indexDiff(R)(auto ref R r, ref ShovelNode node, uint prev)
     {

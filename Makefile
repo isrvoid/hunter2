@@ -9,7 +9,7 @@ endif
 
 BUILDDIR := bin
 SRCDIR := src
-SRCNAMES := util.d shovelnode.d dnode.d node.d store.d app.d entropy.d
+SRCNAMES := util.d shovelnode.d dnode.d node.d store.d app.d entropy.d test.d
 SRC := $(addprefix $(SRCDIR)/passwise/, $(SRCNAMES))
 
 passwise: $(BUILDDIR)/passwise
