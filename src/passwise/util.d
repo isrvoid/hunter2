@@ -3,6 +3,7 @@ module passwise.util;
 import std.algorithm;
 import std.range;
 import std.meta : allSatisfy;
+import std.traits : isNarrowString;
 
 @safe:
 
@@ -313,4 +314,60 @@ auto findListFiles(string path, in string[] exclude, size_t minSize = 0, size_t 
     }
 
     return res;
+}
+
+auto pack(const (int)[] r) pure nothrow
+{
+    auto sorted = r.dup.sort;
+    auto res = new int[](r.length);
+    foreach (i, ref e; res)
+        e = cast(int) sorted.lowerBound(r[i]).length;
+
+    return res;
+}
+
+auto pack(R)(R r) @trusted
+if (isNarrowString!R)
+{
+    import std.encoding : codePoints;
+    return pack(cast(const int[]) r.codePoints.array);
+}
+
+@("pack empty input") unittest
+{
+    assert("".pack.empty);
+}
+
+@("pack single value") unittest
+{
+    assert([0] == "a".pack);
+}
+
+@("pack equal values") unittest
+{
+    assert([0, 0] == "aa".pack);
+}
+
+@("pack adjacent values") unittest
+{
+    assert([0, 1] == "ab".pack);
+    assert([1, 0] == "ba".pack);
+}
+
+@("pack removes gaps") unittest
+{
+    assert([0, 1] == "ac".pack);
+    assert([2, 1, 0] == "xca".pack);
+}
+
+@("pack doesn't remove occupied gaps") unittest
+{
+    assert([0, 2, 1] == "acb".pack);
+    assert([2, 0, 1] == "cab".pack);
+}
+
+@("pack sparsely occupied gaps") unittest
+{
+    assert([0, 2, 1] == "axl".pack);
+    assert([2, 0, 1] == "xal".pack);
 }
