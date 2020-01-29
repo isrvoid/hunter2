@@ -52,7 +52,7 @@ in (count.length == ushort.max + 1)
     import std.string : strip;
     import std.uni : asUpperCase;
     import std.encoding : isValid, codePoints;
-    import passwise.util : limitRepetitions;
+    import passwise.util;
     ShovelNode shovel;
     size_t lineCount;
     size_t invalidCount;
@@ -74,7 +74,7 @@ in (count.length == ushort.max + 1)
 
         normLine.each!(a => ++count[cast(ushort) a]);
 
-        indexDiff(normLine, shovel);
+        normLine.pack.diff.index(shovel);
 
         if (++lineCount % shovelSize == 0)
         {

@@ -175,7 +175,7 @@ struct Pair
     float f;
 }
 
-Pair[] frequency(in size_t[] count) pure nothrow
+Pair[] frequency(const size_t[] count) pure nothrow
 in (count.length <= ushort.max + 1)
 {
     import std.array : array;
@@ -316,7 +316,7 @@ auto findListFiles(string path, in string[] exclude, size_t minSize = 0, size_t 
     return res;
 }
 
-auto pack(const (int)[] r) pure nothrow
+auto pack(const int[] r) pure nothrow
 {
     auto sorted = r.dup.sort;
     auto res = new int[](r.length);
@@ -331,6 +331,16 @@ if (isNarrowString!R)
 {
     import std.encoding : codePoints;
     return pack(cast(const int[]) r.codePoints.array);
+}
+
+auto pack(R)(R r) pure
+if (!isNarrowString!R)
+{
+    import std.traits : isArray;
+    static if (isArray!R)
+        return pack(cast(const int[]) r);
+    else
+        return pack(cast(const int[]) r.array);
 }
 
 @("pack empty input") unittest
@@ -370,4 +380,71 @@ if (isNarrowString!R)
 {
     assert([0, 2, 1] == "axl".pack);
     assert([2, 0, 1] == "xal".pack);
+}
+
+struct Diff(R)
+{
+    private R r;
+    private typeof(r.front) prev;
+
+    this(R _r)
+    {
+        r = _r;
+
+        if (r.empty)
+            return;
+
+        prev = r.front;
+        r.popFront();
+    }
+
+    int front() const pure
+    {
+        return r.front - prev;
+    }
+
+    void popFront() pure
+    {
+        assert(!empty);
+        prev = r.front;
+        r.popFront();
+    }
+
+    bool empty() const pure nothrow
+    {
+        return !length;
+    }
+
+    size_t length() const pure nothrow
+    {
+        return r.length;
+    }
+}
+
+auto diff(R)(R r) pure
+{
+    return Diff!R(r);
+}
+
+@("diff empty input") unittest
+{
+    int[] input;
+    assert(input.diff.empty);
+}
+
+@("diff single value") unittest
+{
+    assert("a".diff.empty);
+}
+
+@("diff two values") unittest
+{
+    assert(equal([0], "aa".diff));
+    assert(equal([1], "ab".diff));
+    assert(equal([-1], "ba".diff));
+}
+
+@("diff multiple values") unittest
+{
+    assert(equal([42, -3, 1], [0, 42, 39, 40].diff));
 }

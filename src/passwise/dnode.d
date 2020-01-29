@@ -3,6 +3,7 @@ module passwise.dnode;
 import std.traits : ReturnType;
 import passwise.node;
 import passwise.shovelnode;
+import passwise.util;
 
 struct DNode
 {
@@ -19,7 +20,6 @@ struct DNode
 void merge(ref DNode a, DNode b) pure nothrow @safe
 in (a.v == b.v, "Merging nodes should have equal values")
 {
-    import passwise.util : mergeLength;
     a.f += b.f;
     // common case is merging smaller node into bigger one
     if (!b.child)
@@ -331,7 +331,7 @@ version (unittest)
 @("compact string") unittest
 {
     ShovelNode sn;
-    "the quick brown fox".indexDiff(sn);
+    "the quick brown fox".index(sn);
     auto dn = sn.to!DNode;
     normalize(dn);
     assert(treesEqual(dn, compact(dn)));
@@ -346,7 +346,7 @@ version (unittest)
          "the quick brown fox jumps over the lazy dog"];
     ShovelNode sn;
     foreach (line; lines)
-        line.indexDiff(sn);
+        line.pack.diff.index(sn);
     auto dn = sn.to!DNode;
     normalize(dn);
     assert(treesEqual(dn, compact(dn)));
@@ -368,12 +368,10 @@ version (unittestLong)
 
     @("full NodeStore stack") unittest
     {
-        import std.array : array;
         import std.range : take;
         import std.path : buildPath;
         import std.file : tempDir;
         import std.string : lineSplitter;
-        import passwise.util : limitRepetitions, frequency;
         import passwise.store;
         auto list = readTestList();
 
@@ -382,8 +380,9 @@ version (unittestLong)
         {
             line.limitRepetitions!3
                 .take(32)
-                .array
-                .indexDiff(shovel);
+                .pack
+                .diff
+                .index(shovel);
         }
         auto root = shovel.to!DNode;
         normalize(root);
