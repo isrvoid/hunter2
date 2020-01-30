@@ -318,10 +318,12 @@ auto findListFiles(string path, in string[] exclude, size_t minSize = 0, size_t 
 
 auto pack(const int[] r) pure nothrow
 {
-    auto sorted = r.dup.sort;
+    auto sorted = r.dup;
+    sorted.sort;
+    sorted.length -= sorted.uniq.copy(sorted).length;
     auto res = new int[](r.length);
     foreach (i, ref e; res)
-        e = cast(int) sorted.lowerBound(r[i]).length;
+        e = cast(int) sorted.assumeSorted.lowerBound(r[i]).length;
 
     return res;
 }
@@ -382,10 +384,18 @@ if (!isNarrowString!R)
     assert([2, 0, 1] == "xal".pack);
 }
 
+@("pack duplicates don't affect span") unittest
+{
+    assert([0, 0, 1] == "aab".pack);
+    assert([0, 1, 1] == "abb".pack);
+    assert([1, 1, 0] == "bba".pack);
+    assert([1, 0, 0] == "baa".pack);
+}
+
 struct Diff(R)
 {
     private R r;
-    private typeof(r.front) prev;
+    private typeof(cast() r.front) prev;
 
     this(R _r)
     {
