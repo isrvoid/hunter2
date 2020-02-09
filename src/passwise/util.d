@@ -254,22 +254,22 @@ float frequency(ushort c, in Pair[] freq) pure nothrow
     assert(0.0f == frequency('f', freq));
 }
 
-float maxRandomFreq(uint v) pure nothrow
+float randomValueProb(uint v) pure nothrow
 {
     return 0.5f / (v + 1);
 }
 
-@("frequencyMin 0 input") unittest
+@("randomValueProb 0 input") unittest
 {
-    assert(maxRandomFreq(0) <= 1.0f);
+    assert(randomValueProb(0) <= 1.0f);
 }
 
-@("frequencyMin larger input") unittest
+@("randomValueProb larger input") unittest
 {
-    assert(maxRandomFreq(1 << 15) > 0.0f);
+    assert(randomValueProb(1 << 15) > 0.0f);
 }
 
-float maxRandomProb(int diff) pure nothrow
+float randomDiffProb(int diff) pure nothrow
 {
     // f(w) = 1/w - d/w^2
     // f(w') = -1/w^2 - -2d/w^3
@@ -280,19 +280,19 @@ float maxRandomProb(int diff) pure nothrow
     return diff ? 0.25 / abs(diff) : 1.0f;
 }
 
-@("maxRandomProb 0") unittest
+@("randomDiffProb 0") unittest
 {
-    assert(maxRandomProb(0) <= 1.0f);
+    assert(randomDiffProb(0) <= 1.0f);
 }
 
-@("maxRandomProb small") unittest
+@("randomDiffProb small") unittest
 {
-    assert(maxRandomProb(1) > maxRandomProb(2));
+    assert(randomDiffProb(1) > randomDiffProb(2));
 }
 
-@("maxRandomProb signed") unittest
+@("randomDiffProb signed") unittest
 {
-    assert(maxRandomProb(1) == maxRandomProb(-1));
+    assert(randomDiffProb(1) == randomDiffProb(-1));
 }
 
 auto findListFiles(string path, in string[] exclude, size_t minSize = 0, size_t maxSize = size_t.max) @system
