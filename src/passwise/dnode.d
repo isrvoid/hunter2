@@ -388,11 +388,11 @@ version (unittestLong)
         normalize(root);
 
         const name = tempDir.buildPath("test_nodes");
-        const expect = Index(frequency([0, 1, 2, 3, 1, 0, 1]), compact(root));
+        const expect = compact(root);
         writeFile(expect, name);
 
         const index = readFile(name);
         assert(expect == index);
-        assert(treesEqual(root, index.nodes));
+        assert(treesEqual(root, index));
     }
 }

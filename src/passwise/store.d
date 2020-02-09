@@ -2,7 +2,6 @@ module passwise.store;
 
 import std.typecons : Tuple;
 import passwise.dnode : DNode, compact;
-import passwise.util : Pair;
 import passwise.node;
 
 @safe:
@@ -18,36 +17,31 @@ struct StoreHeader
         }
         ulong _version;
     }
-    uint freqLength;
     uint[3] groupCount;
     ubyte[4] crc;
     uint dataOffset;
 }
 
-alias Index = Tuple!(Pair[], "freq", NodeStore, "nodes");
-
-private ubyte[4] crc32Of(in Index index) pure nothrow
+private ubyte[4] crc32Of(in NodeStore nodes) pure nothrow
 {
     import std.digest.crc : CRC32;
     CRC32 crc;
-    crc.put(cast(const ubyte[]) index.freq);
-    foreach (e; index.nodes)
+    foreach (e; nodes)
         crc.put(cast(const ubyte[]) e);
     return crc.finish();
 }
 
-void writeFile(in Index index, string name)
+void writeFile(in NodeStore nodes, string name)
 {
     import std.stdio : File;
 
     auto makeHeader()
     {
         StoreHeader h;
-        h.freqLength = cast(uint) index.freq.length;
-        h.groupCount[0] = cast(uint) index.nodes[0].length;
-        h.groupCount[1] = cast(uint) index.nodes[1].length / 2;
-        h.groupCount[2] = cast(uint) index.nodes[2].length - 1;
-        h.crc = crc32Of(index);
+        h.groupCount[0] = cast(uint) nodes[0].length;
+        h.groupCount[1] = cast(uint) nodes[1].length / 2;
+        h.groupCount[2] = cast(uint) nodes[2].length - 1;
+        h.crc = crc32Of(nodes);
         h.dataOffset = 64;
         return h;
     }
@@ -57,12 +51,11 @@ void writeFile(in Index index, string name)
     file.rawWrite([h]);
 
     file.seek(h.dataOffset);
-    file.rawWrite(index.freq);
-    foreach (e; index.nodes)
+    foreach (e; nodes)
         file.rawWrite(e);
 }
 
-Index readFile(string name)
+NodeStore readFile(string name)
 {
     import std.stdio : File;
     auto file = File(name);
@@ -70,29 +63,20 @@ Index readFile(string name)
     if (h._version != StoreHeader.init._version)
         throw new Exception("Version mismatch: " ~ name);
 
-    if (h.freqLength > ushort.max + 1)
-        throw new Exception("Frequency list too long");
-
     file.seek(h.dataOffset);
-    Index res;
-    res.freq = file.rawRead(new Pair[](h.freqLength));
-
     NodeStore ns;
     ns[0].length = h.groupCount[0];
     ns[1].length = h.groupCount[1] * 2;
     ns[2].length = h.groupCount[2] + 1;
     const nodesSizeWithoutLastArray = (cast(ubyte[]) ns[0]).length +
         (cast(ubyte[]) ns[1]).length + (cast(ubyte[]) ns[2]).length;
-    const nodesOffset = h.dataOffset + res.freq[0].sizeof * h.freqLength;
-    ns[3].length = (file.size - nodesOffset - nodesSizeWithoutLastArray) / Node.sizeof;
+    ns[3].length = (file.size - h.dataOffset - nodesSizeWithoutLastArray) / Node.sizeof;
 
     foreach (e; ns)
         file.rawRead(e);
 
-    res.nodes = ns;
-
-    if (h.crc != crc32Of(res))
+    if (h.crc != crc32Of(ns))
         throw new Exception("CRC mismatch: " ~ name);
 
-    return res;
+    return ns;
 }

@@ -3,7 +3,7 @@ module passwise.test;
 import std.random;
 import std.algorithm : each, sort;
 
-import passwise.store : Index;
+import passwise.node : NodeStore;
 import passwise.entropy;
 
 @safe:
@@ -25,7 +25,7 @@ dstring random64(ref Random rnd) pure
     return cast(dstring) a.idup;
 }
 
-size_t[] sampleBits(alias pred)(size_t n, ref in Index index)
+size_t[] sampleBits(alias pred)(size_t n, ref in NodeStore index)
 {
     auto rnd = Random(unpredictableSeed);
     auto a = new size_t[](n);

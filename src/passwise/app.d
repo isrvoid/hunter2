@@ -28,22 +28,19 @@ void generateIndexFile(string listFilesSearchDir, string outputFileName)
 auto indexListFiles(in string[] names)
 {
     import std.path : baseName;
-    import passwise.util : frequency;
-    auto count = new size_t[](ushort.max + 1);
     DNode root;
     foreach (i, name; names)
     {
         writeln("Parsing list ", i + 1, "/", names.length, ": '", name.baseName, "'");
-        indexListFile(name, count, root);
+        indexListFile(name, root);
     }
 
     writeln("Packing");
     normalize(root);
-    return Index(frequency(count), compact(root));
+    return compact(root);
 }
 
-void indexListFile(string name, size_t[] count, ref DNode root, size_t shovelSize = 25_000)
-in (count.length == ushort.max + 1)
+void indexListFile(string name, ref DNode root, size_t shovelSize = 25_000)
 {
     import std.algorithm : each;
     import std.array : array;
@@ -71,8 +68,6 @@ in (count.length == ushort.max + 1)
             .limitRepetitions!3
             .take(32)
             .array;
-
-        normLine.each!(a => ++count[cast(ushort) a]);
 
         normLine.pack.diff.index(shovel);
 
