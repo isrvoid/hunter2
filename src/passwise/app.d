@@ -61,15 +61,15 @@ void indexListFile(string name, ref DNode root, size_t shovelSize = 25_000)
             continue;
         }
 
-        const normLine = codePoints(cast(immutable char[]) line)
+        codePoints(cast(immutable char[]) line)
             .array
             .strip
             .asUpperCase
             .limitRepetitions!3
             .take(32)
-            .array;
-
-        normLine.pack.diff.index(shovel);
+            .pack
+            .diff
+            .index(shovel);
 
         if (++lineCount % shovelSize == 0)
         {

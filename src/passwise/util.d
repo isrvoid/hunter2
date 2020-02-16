@@ -3,7 +3,7 @@ module passwise.util;
 import std.algorithm;
 import std.range;
 import std.meta : allSatisfy;
-import std.traits : isNarrowString;
+import std.traits : isIntegral, isSomeChar;
 
 @safe:
 
@@ -230,33 +230,33 @@ auto findListFiles(string path, in string[] exclude, size_t minSize = 0, size_t 
     return res;
 }
 
-auto pack(const int[] r) pure nothrow
+auto pack(R)(R r) pure
+if (isIntegral!(ElementType!R))
 {
-    auto sorted = r.dup;
-    sorted.sort;
-    sorted.length -= sorted.uniq.copy(sorted).length;
-    auto res = new int[](r.length);
-    foreach (i, ref e; res)
-        e = cast(int) sorted.assumeSorted.lowerBound(r[i]).length;
+    const auto length = r.walkLength;
+    auto invLut = new int[](length);
+    r.copy(invLut);
+    invLut.sort;
+    invLut.length -= invLut.uniq.copy(invLut).length;
+    // TODO test if AA is faster
+    auto res = new int[](length);
+    for (size_t i = 0; i < length; ++i, r.popFront())
+        res[i] = cast(int) invLut.assumeSorted.lowerBound(r.front).length;
 
     return res;
 }
 
-auto pack(R)(R r) @trusted
-if (isNarrowString!R)
+auto pack(R)(R _r) @trusted
+if (isSomeChar!(ElementType!R))
 {
     import std.encoding : codePoints;
-    return pack(cast(const int[]) r.codePoints.array);
-}
-
-auto pack(R)(R r) pure
-if (!isNarrowString!R)
-{
-    import std.traits : isArray;
-    static if (isArray!R)
-        return pack(cast(const int[]) r);
+    import std.traits : isNarrowString;
+    static if (isNarrowString!R)
+        auto r =  _r.codePoints.array;
     else
-        return pack(cast(const int[]) r.array);
+        auto r = _r;
+
+    return r.map!"cast(int) a".pack;
 }
 
 @("pack empty input") unittest
@@ -304,6 +304,11 @@ if (!isNarrowString!R)
     assert([0, 1, 1] == "abb".pack);
     assert([1, 1, 0] == "bba".pack);
     assert([1, 0, 0] == "baa".pack);
+}
+
+@("pack works with ranges") unittest
+{
+    assert(equal(iota(10), iota(10).pack));
 }
 
 struct Diff(R)
